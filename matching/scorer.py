@@ -32,9 +32,8 @@ ANALYST_TERMS = [
     "continuous improvement analyst"
 ]
 
-# Domains where years of direct functional experience can be a real gate rather
-# than a transferable-skills preference. These only matter when paired with
-# explicit requirement language.
+# Domains where years of direct functional experience can be a true hiring gate.
+# These only matter when the posting pairs the domain with explicit requirement language.
 DOMAIN_TERMS = {
     "HR / People Operations": [
         "hr operations", "human resources", "hr generalist", "people operations",
@@ -63,8 +62,8 @@ DOMAIN_TERMS = {
     ],
 }
 
-# Domains supported by the candidate's background strongly enough that an
-# explicit domain requirement should not be treated as a gap.
+# Domains supported strongly enough by the candidate's background that an explicit
+# domain requirement should not automatically be considered a gap.
 PROFILE_DOMAIN_STRENGTHS = {
     "Supply Chain / Procurement",
 }
@@ -87,8 +86,6 @@ def contains_any(text: str, terms: List[str]) -> List[str]:
 def detect_hard_domain_requirements(description: str) -> List[Dict]:
     """Find explicit domain-experience gates without penalizing casual mentions."""
     findings: List[Dict] = []
-    # Split loosely into sentences/bullets so requirement cues and domain terms
-    # need to occur near one another.
     chunks = [c.strip() for c in re.split(r"[\n\r•]|(?<=[.!?])\s+", description) if c.strip()]
 
     for domain, terms in DOMAIN_TERMS.items():
@@ -104,17 +101,18 @@ def detect_hard_domain_requirements(description: str) -> List[Dict]:
                 continue
 
             years = int(years_match.group(1)) if years_match else None
-            # Explicit multi-year requirements are more serious than generic
-            # "experience required" wording.
             if years is not None and years >= 4:
-                penalty = 18
+                penalty = 24
                 severity = "high"
+                gate = "hard"
             elif years is not None and years >= 2:
-                penalty = 12
+                penalty = 16
                 severity = "medium"
+                gate = "soft"
             else:
-                penalty = 9
+                penalty = 10
                 severity = "medium"
+                gate = "soft"
 
             findings.append({
                 "domain": domain,
@@ -122,12 +120,11 @@ def detect_hard_domain_requirements(description: str) -> List[Dict]:
                 "years": years,
                 "penalty": penalty,
                 "severity": severity,
+                "gate": gate,
                 "evidence": chunk[:260],
             })
             break
 
-    # Multiple unrelated domain gates should matter, but cap the deduction so a
-    # single parsing mistake cannot zero out an otherwise relevant role.
     return findings
 
 
@@ -218,17 +215,32 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         details["avoid"] = avoid
 
     hard_domains = detect_hard_domain_requirements(description)
-    domain_penalty = min(24, sum(item["penalty"] for item in hard_domains))
+    domain_penalty = min(30, sum(item["penalty"] for item in hard_domains))
     if domain_penalty:
         total -= domain_penalty
+
+    # A genuine multi-year domain requirement that the candidate does not meet
+    # is a qualification gate, not merely another weighted preference. Adjacent
+    # skills cannot lift the role back into APPLY / STRONG CONSIDER territory.
+    has_hard_gate = any(item.get("gate") == "hard" for item in hard_domains)
+    has_soft_gate = any(item.get("gate") == "soft" for item in hard_domains)
+    if has_hard_gate:
+        total = min(total, 49)
+    elif has_soft_gate:
+        total = min(total, 64)
+
     details["hard_requirements"] = {
         "penalty": domain_penalty,
         "findings": hard_domains,
+        "hard_gate": has_hard_gate,
+        "soft_gate": has_soft_gate,
     }
 
     total = max(0, min(100, int(round(total))))
 
-    if total >= 80:
+    if has_hard_gate:
+        verdict = "SKIP"
+    elif total >= 80:
         verdict = "APPLY"
     elif total >= 65:
         verdict = "STRONG CONSIDER"
