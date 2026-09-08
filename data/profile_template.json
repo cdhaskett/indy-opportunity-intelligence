@@ -1,51 +1,20 @@
 {
   "name": "Job Seeker",
-  "target_titles": [
-    "business analyst",
-    "operations analyst"
-  ],
-  "title_family_terms": [
-    "analyst",
-    "specialist",
-    "coordinator"
-  ],
-  "strong_skills": [
-    "excel",
-    "data analysis",
-    "process improvement"
-  ],
-  "secondary_skills": [
-    "sql",
-    "reporting"
-  ],
-  "focus_terms": [
-    "operations",
-    "workflow",
-    "requirements",
-    "stakeholder",
-    "process improvement"
-  ],
+  "home_city": "",
+  "home_state": "",
+  "target_titles": [],
+  "title_family_terms": [],
+  "strong_skills": [],
+  "secondary_skills": [],
+  "focus_terms": [],
   "bonus_terms": [],
-  "preferred_location_terms": [
-    "your city",
-    "your state"
-  ],
+  "preferred_location_terms": [],
   "remote_ok": true,
-  "salary_target": 80000,
-  "salary_floor": 65000,
+  "salary_target": 0,
+  "salary_floor": 0,
   "employment_type": "full-time",
-  "avoid_terms": [
-    "commission only",
-    "door-to-door"
-  ],
-  "seniority_preferences": [
-    "analyst",
-    "specialist"
-  ],
-  "deprioritize_seniority": [
-    "director",
-    "vice president",
-    "chief"
-  ],
+  "avoid_terms": [],
+  "seniority_preferences": [],
+  "deprioritize_seniority": [],
   "domain_strengths": []
 }
