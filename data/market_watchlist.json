@@ -1,0 +1,23 @@
+{
+  "employers": [
+    {"name":"Community Health Network","segment":"Healthcare","coverage":"not_collected","priority":"high","why":"Business Systems, IT Business Analyst, Workday and analytics roles regularly surface in Indianapolis."},
+    {"name":"Federal Home Loan Bank of Indianapolis","segment":"Financial Services","coverage":"not_collected","priority":"high","why":"CRM, business systems, data and operations roles align strongly with the target profile."},
+    {"name":"AES Indiana","segment":"Utilities","coverage":"not_collected","priority":"high","why":"Business process, systems, billing, customer information and analytics roles."},
+    {"name":"Rolls-Royce","segment":"Manufacturing / Aerospace","coverage":"not_collected","priority":"high","why":"Indianapolis business analyst, digital, operations and data roles."},
+    {"name":"Toyota Automated Logistics / Bastian Solutions","segment":"Manufacturing / Automation","coverage":"not_collected","priority":"high","why":"Business systems and process roles in Indianapolis."},
+    {"name":"Cummins","segment":"Manufacturing","coverage":"not_collected","priority":"high","why":"Large Indiana employer with analytics, systems, operations and continuous-improvement roles."},
+    {"name":"Eli Lilly and Company","segment":"Life Sciences","coverage":"not_collected","priority":"high","why":"Large Indianapolis employer with data, business systems and process roles."},
+    {"name":"Elevance Health","segment":"Healthcare / Insurance","coverage":"not_collected","priority":"high","why":"Large Indianapolis-based employer with analytics and business systems roles."},
+    {"name":"Indiana University Health","segment":"Healthcare","coverage":"not_collected","priority":"high","why":"Systems, reporting, operations and analytics opportunities."},
+    {"name":"OneAmerica Financial","segment":"Financial Services","coverage":"not_collected","priority":"high","why":"Indianapolis business, systems and data roles."},
+    {"name":"Citizens Energy Group","segment":"Utilities","coverage":"not_collected","priority":"medium","why":"Operations, systems, GIS and analytics-adjacent roles."},
+    {"name":"Salesforce","segment":"Technology","coverage":"not_collected","priority":"medium","why":"Indianapolis presence plus CRM ecosystem alignment."},
+    {"name":"DuCharme, McMillen & Associates","segment":"Professional Services","coverage":"not_collected","priority":"medium","why":"Business systems and process-improvement roles in Indianapolis."},
+    {"name":"Gaylor Electric","segment":"Construction / Services","coverage":"not_collected","priority":"medium","why":"Business systems analyst roles and operational systems work."},
+    {"name":"eimagine","segment":"Technology Consulting","coverage":"not_collected","priority":"medium","why":"Indianapolis business analyst and consulting roles."},
+    {"name":"Arcwood Environmental","segment":"Environmental Services","coverage":"not_collected","priority":"medium","why":"Business analyst and operational technology opportunities."},
+    {"name":"Telamon","segment":"Technology / Telecom","coverage":"not_collected","priority":"medium","why":"Carmel-based ERP and business-systems opportunities."},
+    {"name":"Cook Medical","segment":"Medical Devices","coverage":"not_collected","priority":"medium","why":"Indiana ERP, process and systems analyst roles."},
+    {"name":"State of Indiana / Indiana Courts","segment":"Government","coverage":"not_collected","priority":"high","why":"Business analyst, policy, systems, data and public-service opportunities."}
+  ]
+}
