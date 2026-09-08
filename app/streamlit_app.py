@@ -389,10 +389,15 @@ if section == "🔎 Job Market":
     exact_duplicates = int((df["history_match"] == "exact").sum()) if "history_match" in df else 0
     possible_duplicates = int((df["history_match"] == "possible").sum()) if "history_match" in df else 0
 
+    active_queue = df[
+        df["status"].isin(["new", "saved"])
+        & (df["history_match"] != "exact")
+    ].copy()
+
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Market watch", len(df))
-    c2.metric("Apply now", int((df["verdict"] == "APPLY").sum()))
-    c3.metric("Strong", int((df["verdict"] == "STRONG CONSIDER").sum()))
+    c2.metric("Apply now", int((active_queue["verdict"] == "APPLY").sum()))
+    c3.metric("Strong", int((active_queue["verdict"] == "STRONG CONSIDER").sum()))
     c4.metric("Already applied", exact_duplicates)
     c5.metric("Review dupes", possible_duplicates)
 
