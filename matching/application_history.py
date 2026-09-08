@@ -65,6 +65,10 @@ def match_history(job: dict[str, Any], history: list[dict[str, Any]]) -> dict[st
     match_type values:
       - exact: safe to suppress from the new-job queue
       - possible: warn the user, but do not suppress automatically
+
+    Company-only history rows are intentionally never treated as exact. They
+    produce a warning only, which protects against LinkedIn confirmations that
+    identify the employer but omit the role title.
     """
     job_company = _company_key(job.get("company"))
     job_title = _title_key(job.get("title"))
@@ -91,12 +95,15 @@ def match_history(job: dict[str, Any], history: list[dict[str, Any]]) -> dict[st
         if req_exact:
             match_type = "exact"
             score = 1.0
-        elif company_score >= 0.88 and title_score >= 0.86:
+        elif prior_title and company_score >= 0.88 and title_score >= 0.86:
             match_type = "exact"
             score = (company_score + title_score) / 2
-        elif company_score >= 0.84 and title_score >= 0.68:
+        elif prior_title and company_score >= 0.84 and title_score >= 0.68:
             match_type = "possible"
             score = (company_score + title_score) / 2
+        elif not prior_title and company_score >= 0.90:
+            match_type = "possible"
+            score = company_score * 0.80
         else:
             continue
 
