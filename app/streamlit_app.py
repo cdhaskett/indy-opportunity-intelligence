@@ -20,18 +20,40 @@ WATCHLIST = json.loads((ROOT / "data" / "market_watchlist.json").read_text())
 LIVE_REGISTRY = json.loads((ROOT / "data" / "employers.json").read_text())
 HISTORY_PATH = ROOT / "data" / "application_history.json"
 
-st.set_page_config(page_title="Indy Opportunity Intelligence", page_icon="🪟", layout="wide")
+st.set_page_config(
+    page_title="Indy Opportunity Intelligence",
+    page_icon="🪟",
+    layout="wide",
+)
 
 st.markdown(
     """
 <style>
+:root {
+    --xp-blue: #0a5bd8;
+    --xp-blue-dark: #0753c7;
+    --xp-blue-line: #06459e;
+    --xp-ivory: #ece9d8;
+    --xp-card: #fffef5;
+    --xp-white: #ffffff;
+    --xp-border: #7f9db9;
+    --xp-text: #111111;
+    --xp-link: #10479d;
+}
+
+/* Desktop / Bliss-inspired wallpaper */
 html, body, [class*="css"] {
     font-family: Tahoma, Arial, sans-serif;
 }
 
 .stApp {
-    color: #111;
-    background: linear-gradient(#4b9df4 0 42%, #bfe4ff 59%, #79cf5c 60%, #3d9d34 100%);
+    color: var(--xp-text);
+    background: linear-gradient(
+        #4b9df4 0 42%,
+        #bfe4ff 59%,
+        #79cf5c 60%,
+        #3d9d34 100%
+    );
 }
 
 .stApp:before {
@@ -40,27 +62,30 @@ html, body, [class*="css"] {
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(ellipse at 12% 18%, rgba(255,255,255,.90) 0 2.4%, transparent 2.7%),
-      radial-gradient(ellipse at 18% 17%, rgba(255,255,255,.75) 0 3.2%, transparent 3.5%),
-      radial-gradient(ellipse at 74% 21%, rgba(255,255,255,.84) 0 2.5%, transparent 2.8%),
-      radial-gradient(ellipse at 80% 20%, rgba(255,255,255,.70) 0 3.3%, transparent 3.6%),
+      radial-gradient(ellipse at 12% 18%, rgba(255,255,255,.92) 0 2.4%, transparent 2.8%),
+      radial-gradient(ellipse at 18% 17%, rgba(255,255,255,.76) 0 3.2%, transparent 3.6%),
+      radial-gradient(ellipse at 74% 21%, rgba(255,255,255,.86) 0 2.5%, transparent 2.9%),
+      radial-gradient(ellipse at 80% 20%, rgba(255,255,255,.72) 0 3.3%, transparent 3.7%),
       radial-gradient(ellipse at 20% 105%, #318c2c 0 34%, transparent 34.4%),
       radial-gradient(ellipse at 55% 110%, #68c94e 0 44%, transparent 44.4%),
       radial-gradient(ellipse at 92% 108%, #45a83b 0 38%, transparent 38.4%);
 }
 
-.block-container {
+/* Solid application workspace: wallpaper belongs outside the window, never behind content */
+.block-container,
+[data-testid="stMainBlockContainer"] {
     position: relative;
     max-width: 1540px;
     margin: auto;
     padding: .65rem 1.2rem 4rem;
-    background: rgba(236,233,216,.975);
+    background: var(--xp-ivory) !important;
     min-height: 100vh;
     border-left: 1px solid #7697bd;
     border-right: 1px solid #7697bd;
     box-shadow: 0 0 25px #285b8a88;
 }
 
+/* Menu / toolbar */
 .xp-menubar {
     background: #f5f3eb;
     color: #111;
@@ -72,7 +97,6 @@ html, body, [class*="css"] {
     box-shadow: inset 1px 1px #fff;
 }
 
-/* Navigation toolbar */
 div[role="radiogroup"] {
     background: #ece9d8;
     border: 1px solid #aca899;
@@ -88,7 +112,7 @@ div[role="radiogroup"] label {
 }
 div[role="radiogroup"] label:hover {
     background: #fff;
-    border-color: #7f9db9;
+    border-color: var(--xp-border);
 }
 div[role="radiogroup"] p {
     color: #111 !important;
@@ -96,20 +120,21 @@ div[role="radiogroup"] p {
     font-size: .84rem;
 }
 
+/* XP blue section headers */
 .xp-section {
-    background: linear-gradient(#3f93ff, #0753c7);
+    background: linear-gradient(#3f93ff, var(--xp-blue-dark));
     color: white;
     font-weight: bold;
     padding: .36rem .56rem;
-    border: 1px solid #06459e;
+    border: 1px solid var(--xp-blue-line);
     border-radius: 5px 5px 0 0;
     margin-top: .45rem;
     text-shadow: 1px 1px #16448a;
 }
 
-/* Market Pulse */
+/* Market pulse cards */
 div[data-testid="stMetric"] {
-    background: #fffef5;
+    background: var(--xp-card) !important;
     border: 1px solid #888;
     border-top-color: #fff;
     border-left-color: #fff;
@@ -133,34 +158,46 @@ div[data-testid="stMetricLabel"] p {
     font-weight: 400 !important;
 }
 
-/* Result card shell */
+/* Job card shell. Important: force every inner Streamlit block to opaque ivory. */
 div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: #fff !important;
-    border: 1px solid #7f9db9 !important;
+    background: var(--xp-card) !important;
+    border: 1px solid var(--xp-border) !important;
     border-radius: 4px !important;
     box-shadow: inset 1px 1px #fff !important;
     margin-bottom: .48rem;
     overflow: hidden;
 }
+div[data-testid="stVerticalBlockBorderWrapper"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"],
+div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"],
+div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stColumn"] {
+    background: var(--xp-card) !important;
+}
 div[data-testid="stVerticalBlockBorderWrapper"] > div {
-    padding-top: .16rem !important;
-    padding-bottom: .16rem !important;
+    padding-top: .12rem !important;
+    padding-bottom: .12rem !important;
+}
+div[data-testid="stVerticalBlockBorderWrapper"] p,
+div[data-testid="stVerticalBlockBorderWrapper"] label {
+    color: #111 !important;
 }
 
+/* Each job gets a real XP window title bar */
 .job-titlebar {
     display: flex;
     align-items: center;
     gap: .45rem;
     width: 100%;
-    padding: .35rem .48rem;
-    margin: -.05rem 0 .40rem 0;
+    padding: .34rem .48rem;
+    margin: -.02rem 0 .34rem;
     background: linear-gradient(180deg, #3f93ff 0%, #0c63df 48%, #0753c7 100%);
-    border: 1px solid #06459e;
-    color: #fff;
+    border: 1px solid var(--xp-blue-line);
+    color: #fff !important;
     text-shadow: 1px 1px #16448a;
     box-sizing: border-box;
 }
 .job-title-text {
+    color: #fff !important;
     font-size: .96rem;
     font-weight: 700;
     flex: 1;
@@ -170,7 +207,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div {
     min-width: 2.05rem;
     text-align: center;
     background: linear-gradient(#72d377, #33a542);
-    color: white;
+    color: white !important;
     border: 1px solid #176f27;
     padding: .13rem .33rem;
     border-radius: 3px;
@@ -181,7 +218,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div {
 .salary {
     flex: 0 0 auto;
     background: #ffdf57;
-    color: #493900;
+    color: #493900 !important;
     border: 1px solid #a47b00;
     padding: .13rem .34rem;
     border-radius: 3px;
@@ -191,30 +228,33 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div {
 }
 .meta {
     font-size: .80rem;
-    color: #444;
-    margin: .08rem 0 .30rem;
+    color: #333 !important;
+    margin: .06rem 0 .28rem;
 }
+.meta b { color: #111 !important; }
+
 .badge {
     display: inline-block;
     padding: .13rem .34rem;
     margin: 0 .22rem .18rem 0;
     font-size: .66rem;
     font-weight: bold;
-    border: 1px solid #7f9db9;
+    border: 1px solid var(--xp-border);
     background: #dbe8f7;
-    color: #284b77;
+    color: #284b77 !important;
     text-transform: uppercase;
 }
-.apply { background: #39b54a; color: #fff; border-color: #1c7d2b; }
-.strong { background: #ffd65a; color: #4e3900; border-color: #a87800; }
-.stretch { background: #e2eaf3; color: #274a75; border-color: #7f9db9; }
-.skip { background: #efc2bd; color: #721b14; border-color: #b25349; }
+.apply { background: #39b54a; color: #fff !important; border-color: #1c7d2b; }
+.strong { background: #ffd65a; color: #4e3900 !important; border-color: #a87800; }
+.stretch { background: #e2eaf3; color: #274a75 !important; border-color: #7f9db9; }
+.skip { background: #efc2bd; color: #721b14 !important; border-color: #b25349; }
+
 .dup {
     background: #fff7a8;
     border: 1px solid #d0bd3e;
-    color: #4c4314;
+    color: #4c4314 !important;
     padding: .34rem .46rem;
-    margin: .24rem 0 .34rem;
+    margin: .22rem 0 .32rem;
     font-size: .76rem;
 }
 
@@ -236,21 +276,28 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div {
     background: linear-gradient(#fffef0, #f2e7ad) !important;
 }
 
-/* Kill the black modern-looking select arrow block */
+/* Fully XP-style Selectbox / Multiselect, including the arrow region */
 div[data-testid="stSelectbox"] div[data-baseweb="select"],
-div[data-testid="stMultiSelect"] div[data-baseweb="select"] {
+div[data-testid="stMultiSelect"] div[data-baseweb="select"],
+div[data-baseweb="select"] {
     background: #fff !important;
+    color: #111 !important;
 }
 div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div > div,
 div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
-div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div > div,
 div[data-baseweb="select"] > div,
 [role="combobox"] {
     background: #fff !important;
     color: #111 !important;
-    border-color: #7f9db9 !important;
+    border-color: var(--xp-border) !important;
     border-radius: 2px !important;
+}
+div[data-baseweb="select"] > div > div:last-child,
+div[data-baseweb="select"] > div > div:last-child > div,
+div[data-baseweb="select"] [aria-hidden="true"],
+div[data-baseweb="select"] [role="presentation"] {
+    background: #fff !important;
+    color: #111 !important;
 }
 div[data-baseweb="select"] *,
 div[data-testid="stSelectbox"] *,
@@ -262,23 +309,29 @@ div[data-testid="stSelectbox"] svg,
 div[data-testid="stMultiSelect"] svg {
     fill: #111 !important;
     color: #111 !important;
+    background: #fff !important;
 }
 [data-baseweb="tag"] {
     background: #dbe8f7 !important;
-    border: 1px solid #7f9db9 !important;
+    border: 1px solid var(--xp-border) !important;
     border-radius: 2px !important;
 }
 [data-baseweb="tag"] *,
 [data-baseweb="tag"] span {
-    color: #10479d !important;
+    color: var(--xp-link) !important;
 }
 
-/* Score explanation = XP details pane */
+/* Score explanation = old Windows details pane */
 div[data-testid="stExpander"] {
-    border: 1px solid #7f9db9 !important;
+    border: 1px solid var(--xp-border) !important;
     background: #fff !important;
     border-radius: 2px !important;
     max-width: 390px;
+}
+div[data-testid="stExpander"] > div,
+div[data-testid="stExpander"] details,
+div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+    background: #fff !important;
 }
 div[data-testid="stExpander"] summary {
     background: linear-gradient(#f7fbff, #dceaf8) !important;
@@ -287,7 +340,7 @@ div[data-testid="stExpander"] summary {
     padding-bottom: 0 !important;
 }
 div[data-testid="stExpander"] summary p {
-    color: #10479d !important;
+    color: var(--xp-link) !important;
     font-size: .76rem;
     font-weight: 700;
 }
@@ -297,6 +350,7 @@ div[data-testid="stExpander"] strong {
     color: #111 !important;
 }
 
+/* Remaining controls */
 [data-testid="stToggle"] p,
 .stMultiSelect label p,
 .stSelectbox label p,
@@ -308,11 +362,12 @@ div[data-testid="stExpander"] strong {
     color: #4e5f6f !important;
 }
 div[data-testid="stDataFrame"] {
-    border: 1px solid #7f9db9;
+    border: 1px solid var(--xp-border);
     border-radius: 0;
     overflow: hidden;
 }
 
+/* Taskbar */
 .taskbar {
     position: fixed;
     bottom: 0;
@@ -353,7 +408,11 @@ div[data-testid="stDataFrame"] {
     unsafe_allow_html=True,
 )
 
-st.markdown('<div class="xp-menubar">File &nbsp; View &nbsp; Tools &nbsp; Help</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="xp-menubar">File &nbsp; View &nbsp; Tools &nbsp; Help</div>',
+    unsafe_allow_html=True,
+)
+
 section = st.radio(
     "Navigation",
     ["🏠 Job Market", "🌐 Market Coverage", "📂 My Applications"],
@@ -379,7 +438,10 @@ for raw in list_jobs():
     rows.append(job)
 
 df = pd.DataFrame(rows) if rows else pd.DataFrame()
-statuses = ["new", "saved", "applied", "screen", "interview", "final", "offer", "rejected", "withdrawn"]
+statuses = [
+    "new", "saved", "applied", "screen", "interview",
+    "final", "offer", "rejected", "withdrawn",
+]
 
 
 def money(value):
@@ -423,7 +485,11 @@ def explain(row):
         if matched:
             st.write("**Matched signals:** " + ", ".join(matched[:14]))
         for finding in details.get("hard_requirements", {}).get("findings", []):
-            years = f"{finding.get('years')}+ years" if finding.get("years") else "direct experience"
+            years = (
+                f"{finding.get('years')}+ years"
+                if finding.get("years")
+                else "direct experience"
+            )
             st.error(f"Hard requirement gap: {years} in {finding['domain']}.")
 
 
@@ -441,9 +507,15 @@ if section == "🏠 Job Market":
         st.info("No jobs loaded yet. Click Refresh Market.")
         st.stop()
 
-    active = df[(df["status"].isin(["new", "saved"])) & (df["history_match"] != "exact")].copy()
+    active = df[
+        (df["status"].isin(["new", "saved"]))
+        & (df["history_match"] != "exact")
+    ].copy()
 
-    st.markdown('<div class="xp-section">📊 Market Pulse</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="xp-section">📊 Market Pulse</div>',
+        unsafe_allow_html=True,
+    )
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Market Watch", len(df))
     c2.metric("Apply Now", int((active["verdict"] == "APPLY").sum()))
@@ -451,8 +523,13 @@ if section == "🏠 Job Market":
     c4.metric("Already Applied", int((df["history_match"] == "exact").sum()))
     c5.metric("Review Duplicates", int((df["history_match"] == "possible").sum()))
 
-    st.markdown('<div class="xp-section">📂 Today’s Shortlist</div>', unsafe_allow_html=True)
-    st.caption(f"Duplicate guard active · {len(history)} private application-history records loaded")
+    st.markdown(
+        '<div class="xp-section">📂 Today’s Shortlist</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        f"Duplicate guard active · {len(history)} private application-history records loaded"
+    )
 
     show_processed = st.toggle("Show jobs I've already handled")
     show_exact = st.toggle("Show jobs matched to a previous application")
@@ -465,7 +542,10 @@ if section == "🏠 Job Market":
             default=["APPLY", "STRONG CONSIDER", "STRETCH"],
         )
     with f2:
-        company_filter = st.multiselect("Company", sorted(df["company"].dropna().unique()))
+        company_filter = st.multiselect(
+            "Company",
+            sorted(df["company"].dropna().unique()),
+        )
     with f3:
         status_filter = st.multiselect("Status", statuses)
 
@@ -478,22 +558,32 @@ if section == "🏠 Job Market":
         view = view[view["company"].isin(company_filter)]
     if status_filter:
         view = view[view["status"].isin(status_filter)]
-    view = view.sort_values(["score", "date_found"], ascending=[False, False])
+    view = view.sort_values(
+        ["score", "date_found"],
+        ascending=[False, False],
+    )
 
     for _, row in view.iterrows():
         with st.container(border=True):
             pay = salary_label(row)
-            pay_html = f'<span class="salary">💵 {pay}</span>' if pay else ""
+            pay_html = (
+                f'<span class="salary">💵 {pay}</span>'
+                if pay
+                else ""
+            )
             st.markdown(
-                f'<div class="job-titlebar"><span class="score">{int(row["score"])}</span>'
-                f'<span class="job-title-text">{row["title"]}</span>{pay_html}</div>',
+                f'<div class="job-titlebar">'
+                f'<span class="score">{int(row["score"])}</span>'
+                f'<span class="job-title-text">{row["title"]}</span>'
+                f'{pay_html}</div>',
                 unsafe_allow_html=True,
             )
 
             left, right = st.columns([5.6, 1])
             with left:
                 st.markdown(
-                    f'<div class="meta"><b>{row["company"]}</b> · {row["location"] or "Location not listed"}</div>',
+                    f'<div class="meta"><b>{row["company"]}</b> · '
+                    f'{row["location"] or "Location not listed"}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -501,8 +591,9 @@ if section == "🏠 Job Market":
                 if match and match["match_type"] == "possible":
                     prior = match["prior"]
                     st.markdown(
-                        f'<div class="dup">⚠ Possible duplicate · Previously applied to '
-                        f'<b>{prior.get("title") or "another role"}</b> at {prior.get("company", row["company"])}</div>',
+                        f'<div class="dup">⚠ Possible duplicate · '
+                        f'Previously applied to <b>{prior.get("title") or "another role"}</b> '
+                        f'at {prior.get("company", row["company"])}</div>',
                         unsafe_allow_html=True,
                     )
 
@@ -512,6 +603,7 @@ if section == "🏠 Job Market":
                     else "stretch" if row["verdict"] == "STRETCH"
                     else "skip"
                 )
+
                 st.markdown(
                     f'<span class="badge {klass}">{row["verdict"]}</span>'
                     f'<span class="badge">{row["status"]}</span>'
@@ -527,7 +619,11 @@ if section == "🏠 Job Market":
                     explain(row)
 
             with right:
-                current = row["status"] if row["status"] in statuses else "new"
+                current = (
+                    row["status"]
+                    if row["status"] in statuses
+                    else "new"
+                )
                 new_status = st.selectbox(
                     "Status",
                     statuses,
@@ -539,7 +635,10 @@ if section == "🏠 Job Market":
                     st.rerun()
 
 elif section == "🌐 Market Coverage":
-    st.markdown('<div class="xp-section">🌐 Market Coverage</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="xp-section">🌐 Market Coverage</div>',
+        unsafe_allow_html=True,
+    )
     live = pd.DataFrame(LIVE_REGISTRY["employers"])
     watch = pd.DataFrame(WATCHLIST["employers"])
     c1, c2, c3 = st.columns(3)
@@ -550,25 +649,47 @@ elif section == "🌐 Market Coverage":
     st.dataframe(watch, width="stretch", hide_index=True)
 
 else:
-    st.markdown('<div class="xp-section">📂 My Applications</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="xp-section">📂 My Applications</div>',
+        unsafe_allow_html=True,
+    )
     uploaded = st.file_uploader("Import application history", type=["json"])
     if uploaded:
         try:
             payload = json.loads(uploaded.getvalue().decode())
-            items = payload.get("applications", []) if isinstance(payload, dict) else payload
-            save_history(HISTORY_PATH, [x for x in items if isinstance(x, dict)])
+            items = (
+                payload.get("applications", [])
+                if isinstance(payload, dict)
+                else payload
+            )
+            save_history(
+                HISTORY_PATH,
+                [x for x in items if isinstance(x, dict)],
+            )
             st.success("History imported.")
             st.rerun()
         except Exception as exc:
             st.error(str(exc))
+
     if history:
-        st.dataframe(pd.DataFrame(history), width="stretch", hide_index=True)
+        st.dataframe(
+            pd.DataFrame(history),
+            width="stretch",
+            hide_index=True,
+        )
+
     if not df.empty:
         handled = df[~df["status"].isin(["new", "saved"])]
-        st.dataframe(handled, width="stretch", hide_index=True)
+        st.dataframe(
+            handled,
+            width="stretch",
+            hide_index=True,
+        )
 
 st.markdown(
-    '<div class="taskbar"><span class="start">🪟 start</span>'
-    '<span class="task-name">📁 Indy Opportunity Intelligence</span></div>',
+    '<div class="taskbar">'
+    '<span class="start">🪟 start</span>'
+    '<span class="task-name">📁 Indy Opportunity Intelligence</span>'
+    '</div>',
     unsafe_allow_html=True,
 )
