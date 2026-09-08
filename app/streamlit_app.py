@@ -26,149 +26,236 @@ st.markdown(
     """
     <style>
     :root {
-        --bg: #f7f4ee;
-        --card: #fffdfa;
-        --ink: #242424;
-        --muted: #74706a;
-        --accent: #3f5f5a;
-        --accent-2: #9f6f5d;
-        --line: #ddd6cc;
-        --soft: #ece7df;
+        --bg: #0b0f14;
+        --panel: #111821;
+        --panel-2: #151e28;
+        --panel-3: #1a2530;
+        --ink: #f4f1ea;
+        --muted: #96a1ad;
+        --line: #273542;
+        --teal: #47c6b3;
+        --teal-soft: #153a37;
+        --gold: #d6a85f;
+        --gold-soft: #3d3020;
+        --copper: #d9784c;
+        --slate: #7f8d9a;
+        --red: #ef6b68;
     }
 
-    .stApp {
-        background: linear-gradient(180deg, #fbf9f4 0%, var(--bg) 42%, #f3efe7 100%);
-        color: var(--ink);
-    }
+    html, body, [class*="css"] { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .stApp { background: var(--bg); color: var(--ink); }
+    .block-container { max-width: 1240px; padding-top: 1.35rem; padding-bottom: 4rem; }
 
-    .block-container {
-        max-width: 1320px;
-        padding-top: 2.2rem;
-        padding-bottom: 4rem;
-    }
-
-    h1, h2, h3 {
-        letter-spacing: -0.02em;
-    }
+    h1, h2, h3, p, label, .stMarkdown { color: var(--ink); }
+    h2 { letter-spacing: -.025em; }
 
     .hero {
-        padding: 1.1rem 1.25rem 1.25rem;
+        position: relative;
+        overflow: hidden;
+        padding: 1.35rem 1.55rem 1.45rem;
         border: 1px solid var(--line);
-        background: rgba(255,253,250,.9);
-        border-radius: 24px;
-        box-shadow: 0 10px 30px rgba(60, 50, 40, .05);
-        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #121a23 0%, #0f171f 64%, #172229 100%);
+        border-radius: 18px;
+        margin-bottom: .8rem;
+        box-shadow: 0 18px 48px rgba(0,0,0,.24);
     }
-
+    .hero:after {
+        content: "";
+        position: absolute;
+        width: 220px;
+        height: 220px;
+        border: 1px solid rgba(71,198,179,.16);
+        border-radius: 50%;
+        right: -80px;
+        top: -105px;
+        box-shadow: 0 0 0 34px rgba(71,198,179,.025), 0 0 0 68px rgba(71,198,179,.018);
+    }
     .hero-kicker {
+        color: var(--copper);
+        font-size: .69rem;
+        font-weight: 800;
+        letter-spacing: .18em;
         text-transform: uppercase;
-        letter-spacing: .14em;
-        font-size: .72rem;
-        color: var(--accent-2);
-        font-weight: 700;
-        margin-bottom: .25rem;
+        margin-bottom: .38rem;
     }
-
     .hero-title {
-        font-size: 2.25rem;
-        line-height: 1.05;
-        font-weight: 760;
         color: var(--ink);
+        font-size: 2.05rem;
+        line-height: 1.08;
+        font-weight: 780;
+        letter-spacing: -.035em;
         margin: 0;
     }
-
     .hero-subtitle {
-        margin-top: .5rem;
         color: var(--muted);
-        font-size: 1rem;
-    }
-
-    div[data-testid="stMetric"] {
-        background: rgba(255,253,250,.8);
-        border: 1px solid var(--line);
-        padding: .9rem 1rem;
-        border-radius: 18px;
-        box-shadow: 0 5px 18px rgba(60, 50, 40, .035);
-    }
-
-    div[data-testid="stMetricLabel"] p {
-        color: var(--muted);
-        font-size: .78rem;
-        text-transform: uppercase;
-        letter-spacing: .08em;
-        font-weight: 700;
-    }
-
-    div[data-testid="stMetricValue"] {
-        color: var(--ink);
-    }
-
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: rgba(255,253,250,.92);
-        border-color: var(--line) !important;
-        border-radius: 22px;
-        box-shadow: 0 8px 26px rgba(60, 50, 40, .045);
-    }
-
-    .job-title {
-        font-size: 1.28rem;
-        font-weight: 760;
-        line-height: 1.2;
-        color: var(--ink);
-        margin-bottom: .25rem;
-    }
-
-    .score-pill {
-        display: inline-block;
-        padding: .2rem .55rem;
-        margin-right: .45rem;
-        border-radius: 999px;
-        background: var(--accent);
-        color: white;
-        font-size: .82rem;
-        font-weight: 700;
-        vertical-align: 2px;
-    }
-
-    .salary-pill {
-        display: inline-block;
-        padding: .2rem .55rem;
-        margin-left: .35rem;
-        border-radius: 999px;
-        background: #eee4dc;
-        color: #6b4c40;
-        font-size: .82rem;
-        font-weight: 700;
-        vertical-align: 2px;
-    }
-
-    .job-meta {
-        color: var(--muted);
-        font-size: .93rem;
-        margin-bottom: .4rem;
-    }
-
-    .verdict-line {
-        color: #4d4a45;
-        font-size: .91rem;
-        margin-top: .15rem;
+        font-size: .92rem;
+        margin-top: .48rem;
+        max-width: 840px;
     }
 
     div[role="radiogroup"] {
-        background: rgba(255,253,250,.7);
+        display: flex;
+        gap: .35rem;
+        background: #0f161e;
         border: 1px solid var(--line);
-        padding: .35rem;
-        border-radius: 16px;
+        padding: .32rem;
+        border-radius: 12px;
         width: fit-content;
+        margin-bottom: .45rem;
     }
+    div[role="radiogroup"] label {
+        border-radius: 9px;
+        padding: .22rem .45rem;
+    }
+    div[role="radiogroup"] p { color: #dce3e8 !important; font-weight: 650; }
+
+    div[data-testid="stMetric"] {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: .72rem .85rem;
+        min-height: 92px;
+        box-shadow: none;
+    }
+    div[data-testid="stMetricLabel"] p {
+        color: var(--muted) !important;
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .09em;
+        font-weight: 780;
+    }
+    div[data-testid="stMetricValue"] {
+        color: var(--ink) !important;
+        font-size: 1.55rem;
+        font-weight: 740;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: var(--panel) !important;
+        border: 1px solid var(--line) !important;
+        border-radius: 15px !important;
+        box-shadow: 0 10px 28px rgba(0,0,0,.16);
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] > div { padding-top: .25rem; padding-bottom: .25rem; }
+
+    .job-title {
+        color: var(--ink);
+        font-size: 1.18rem;
+        font-weight: 760;
+        line-height: 1.24;
+        letter-spacing: -.015em;
+        margin-bottom: .3rem;
+    }
+    .score-pill {
+        display: inline-block;
+        min-width: 2.25rem;
+        text-align: center;
+        padding: .23rem .5rem;
+        margin-right: .55rem;
+        border-radius: 8px;
+        background: #203b3a;
+        border: 1px solid #2d5b57;
+        color: #9ce9dd;
+        font-size: .78rem;
+        font-weight: 800;
+        vertical-align: 2px;
+    }
+    .salary-pill {
+        display: inline-block;
+        padding: .22rem .5rem;
+        margin-left: .5rem;
+        border-radius: 8px;
+        background: #30261b;
+        border: 1px solid #5b462d;
+        color: #f0c98b;
+        font-size: .77rem;
+        font-weight: 760;
+        vertical-align: 2px;
+    }
+    .job-meta { color: var(--muted); font-size: .87rem; margin-bottom: .62rem; }
+    .job-meta strong { color: #dfe6ea; }
+
+    .verdict-row { display: flex; gap: .38rem; align-items: center; flex-wrap: wrap; margin: .35rem 0 .55rem; }
+    .verdict-badge, .meta-badge {
+        display: inline-block;
+        padding: .2rem .48rem;
+        border-radius: 7px;
+        font-size: .68rem;
+        font-weight: 820;
+        letter-spacing: .055em;
+        text-transform: uppercase;
+    }
+    .verdict-apply { background: var(--teal-soft); border: 1px solid #28675f; color: #7fe1d3; }
+    .verdict-strong { background: var(--gold-soft); border: 1px solid #6d5732; color: #efc77f; }
+    .verdict-stretch { background: #27313b; border: 1px solid #41505e; color: #bdc7cf; }
+    .verdict-skip { background: #3a2224; border: 1px solid #6a383b; color: #f09a97; }
+    .meta-badge { background: #18222c; border: 1px solid #2d3a47; color: #9daab5; }
+
+    .duplicate-note {
+        border-left: 3px solid var(--gold);
+        background: #201c16;
+        color: #d9c7a7;
+        padding: .58rem .7rem;
+        border-radius: 0 8px 8px 0;
+        font-size: .82rem;
+        margin: .45rem 0 .58rem;
+    }
+    .duplicate-note strong { color: #f1d59f; }
+
+    .section-eyebrow {
+        color: var(--copper);
+        text-transform: uppercase;
+        letter-spacing: .12em;
+        font-size: .66rem;
+        font-weight: 800;
+        margin-top: .9rem;
+        margin-bottom: .08rem;
+    }
+
+    .stCaption, [data-testid="stCaptionContainer"] { color: var(--muted) !important; }
+    .stCaption p, [data-testid="stCaptionContainer"] p { color: var(--muted) !important; }
 
     .stButton > button, .stLinkButton > a {
-        border-radius: 999px !important;
-        font-weight: 650 !important;
+        background: #18232d !important;
+        border: 1px solid #344452 !important;
+        color: #eef2f4 !important;
+        border-radius: 9px !important;
+        font-weight: 700 !important;
+        min-height: 2.35rem;
+    }
+    .stButton > button:hover, .stLinkButton > a:hover {
+        border-color: var(--teal) !important;
+        color: #a9eee4 !important;
     }
 
-    hr {
-        border-color: var(--line);
+    div[data-baseweb="select"] > div {
+        background: var(--panel-2) !important;
+        border-color: #344351 !important;
+        color: var(--ink) !important;
+        border-radius: 9px !important;
+    }
+    div[data-baseweb="select"] * { color: #dfe5e9 !important; }
+    [data-baseweb="tag"] { background: #26343f !important; }
+
+    div[data-testid="stExpander"] {
+        border-color: #2a3946 !important;
+        background: #0f161d;
+        border-radius: 9px;
+    }
+    div[data-testid="stExpander"] summary p { color: #cbd4db !important; font-size: .82rem; }
+
+    [data-testid="stToggle"] p, .stMultiSelect label p, .stSelectbox label p, .stFileUploader label p {
+        color: #b9c3ca !important;
+    }
+
+    div[data-testid="stDataFrame"] { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    [data-testid="stAlert"] { border-radius: 9px; }
+    hr { border-color: var(--line); }
+
+    @media (max-width: 850px) {
+        .hero-title { font-size: 1.62rem; }
+        .block-container { padding-left: .9rem; padding-right: .9rem; }
+        .salary-pill { margin-left: .15rem; margin-top: .25rem; }
     }
     </style>
     """,
@@ -178,9 +265,9 @@ st.markdown(
 st.markdown(
     """
     <div class="hero">
-      <div class="hero-kicker">INDY OPPORTUNITY INTELLIGENCE</div>
+      <div class="hero-kicker">INDY OPPORTUNITY INTELLIGENCE // MARKET WATCH</div>
       <div class="hero-title">Find the few jobs actually worth your time.</div>
-      <div class="hero-subtitle">Central Indiana + remote role discovery, fit scoring, duplicate protection, and application tracking — without the endless scroll.</div>
+      <div class="hero-subtitle">Central Indiana + remote opportunity discovery, fit scoring, duplicate protection, and application tracking.</div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -239,9 +326,18 @@ def salary_label(row):
     return None
 
 
+def verdict_class(verdict):
+    return {
+        "APPLY": "verdict-apply",
+        "STRONG CONSIDER": "verdict-strong",
+        "STRETCH": "verdict-stretch",
+        "SKIP": "verdict-skip",
+    }.get(verdict, "verdict-stretch")
+
+
 def render_score_explanation(row):
     details = score_details[row["id"]]
-    with st.expander("Why this score?"):
+    with st.expander(f"Why {int(row['score'])}?"):
         score_rows = [
             ("Title / job family", details["title"]["score"], details["title"]["max"]),
             ("Skills", details["skills"]["score"], details["skills"]["max"]),
@@ -265,6 +361,12 @@ def render_score_explanation(row):
         warnings = details["seniority"].get("warnings", [])
         if warnings:
             st.warning("Seniority warning: " + ", ".join(warnings))
+
+        hard = details.get("hard_requirements", {})
+        for finding in hard.get("findings", []):
+            years = f"{finding['years']}+ years" if finding.get("years") else "direct experience"
+            st.error(f"Hard requirement gap: {years} in {finding['domain']}. This can cap the recommendation.")
+
         if details["salary"].get("salary_min") is None:
             st.caption("Compensation was not listed, so the role receives neutral partial credit rather than a penalty.")
 
@@ -288,13 +390,14 @@ if section == "🔎 Job Market":
     possible_duplicates = int((df["history_match"] == "possible").sum()) if "history_match" in df else 0
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Jobs monitored", len(df))
+    c1.metric("Market watch", len(df))
     c2.metric("Apply now", int((df["verdict"] == "APPLY").sum()))
-    c3.metric("Strong consider", int((df["verdict"] == "STRONG CONSIDER").sum()))
+    c3.metric("Strong", int((df["verdict"] == "STRONG CONSIDER").sum()))
     c4.metric("Already applied", exact_duplicates)
-    c5.metric("Check duplicates", possible_duplicates)
+    c5.metric("Review dupes", possible_duplicates)
 
-    st.subheader("Today’s Market")
+    st.markdown('<div class="section-eyebrow">ACTIVE QUEUE</div>', unsafe_allow_html=True)
+    st.subheader("Today’s Shortlist")
     if history:
         st.caption(f"Duplicate guard active · {len(history)} private application-history records loaded.")
     else:
@@ -341,7 +444,7 @@ if section == "🔎 Job Market":
         match = history_matches.get(row["id"])
         salary = salary_label(row)
         with st.container(border=True):
-            a, b = st.columns([4.7, 1])
+            a, b = st.columns([5.1, 1])
             with a:
                 salary_html = f'<span class="salary-pill">{salary}</span>' if salary else ""
                 st.markdown(
@@ -357,17 +460,19 @@ if section == "🔎 Job Market":
                     prior = match["prior"]
                     prior_date = prior.get("date") or prior.get("applied_date") or "date unknown"
                     prior_title = prior.get("title") or "another role"
-                    st.warning(
-                        f"Possible previous application: **{prior_title}** at **{prior.get('company', row['company'])}** ({prior_date}). Review before applying."
+                    st.markdown(
+                        f'<div class="duplicate-note">⚠ <strong>Possible duplicate</strong> · Previously applied to {prior_title} at {prior.get("company", row["company"])} · {prior_date}</div>',
+                        unsafe_allow_html=True,
                     )
 
                 source = row.get("source") or "unknown"
+                klass = verdict_class(row["verdict"])
                 st.markdown(
-                    f'<div class="verdict-line"><strong>{row["verdict"]}</strong> · {row["status"].title()} · {source}</div>',
+                    f'<div class="verdict-row"><span class="verdict-badge {klass}">{row["verdict"]}</span><span class="meta-badge">{row["status"]}</span><span class="meta-badge">{source}</span></div>',
                     unsafe_allow_html=True,
                 )
 
-                button_col, explain_col = st.columns([1, 5])
+                button_col, explain_col = st.columns([1.1, 4.9])
                 with button_col:
                     if row.get("url"):
                         st.link_button("Open posting ↗", row["url"])
@@ -376,7 +481,7 @@ if section == "🔎 Job Market":
             with b:
                 current_status = row["status"] if row["status"] in status_options else "new"
                 new_status = st.selectbox(
-                    "Update",
+                    "Status",
                     status_options,
                     index=status_options.index(current_status),
                     key=f"status-{row['id']}",
@@ -386,6 +491,7 @@ if section == "🔎 Job Market":
                     st.rerun()
 
 elif section == "🗺️ Market Coverage":
+    st.markdown('<div class="section-eyebrow">SOURCE MAP</div>', unsafe_allow_html=True)
     st.subheader("Market Coverage")
     st.caption("Who the app can collect today — and which Central Indiana employers are next on the integration list.")
 
@@ -419,6 +525,7 @@ elif section == "🗺️ Market Coverage":
     )
 
 elif section == "📊 My Applications":
+    st.markdown('<div class="section-eyebrow">PRIVATE LEDGER</div>', unsafe_allow_html=True)
     st.subheader("My Applications")
     st.caption("Your private history stays on your computer. It is ignored by Git and is not published to the public repository.")
 
