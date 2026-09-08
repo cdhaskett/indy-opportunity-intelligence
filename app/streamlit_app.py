@@ -41,11 +41,11 @@ st.markdown(
     --xp-link: #10479d;
 }
 
-/* Desktop / Bliss-inspired wallpaper */
 html, body, [class*="css"] {
     font-family: Tahoma, Arial, sans-serif;
 }
 
+/* Bliss-inspired desktop wallpaper */
 .stApp {
     color: var(--xp-text);
     background: linear-gradient(
@@ -61,6 +61,7 @@ html, body, [class*="css"] {
     position: fixed;
     inset: 0;
     pointer-events: none;
+    z-index: 0;
     background:
       radial-gradient(ellipse at 12% 18%, rgba(255,255,255,.92) 0 2.4%, transparent 2.8%),
       radial-gradient(ellipse at 18% 17%, rgba(255,255,255,.76) 0 3.2%, transparent 3.6%),
@@ -71,21 +72,34 @@ html, body, [class*="css"] {
       radial-gradient(ellipse at 92% 108%, #45a83b 0 38%, transparent 38.4%);
 }
 
-/* Solid application workspace: wallpaper belongs outside the window, never behind content */
-.block-container,
-[data-testid="stMainBlockContainer"] {
-    position: relative;
-    max-width: 1540px;
-    margin: auto;
-    padding: .65rem 1.2rem 4rem;
-    background: var(--xp-ivory) !important;
-    min-height: 100vh;
+/* Permanent Explorer window backdrop. It stays put when the page scrolls. */
+.stApp:after {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(1540px, calc(100vw - 48px));
+    background: var(--xp-ivory);
     border-left: 1px solid #7697bd;
     border-right: 1px solid #7697bd;
     box-shadow: 0 0 25px #285b8a88;
+    pointer-events: none;
 }
 
-/* Menu / toolbar */
+.block-container,
+[data-testid="stMainBlockContainer"] {
+    position: relative;
+    z-index: 1;
+    max-width: 1540px;
+    margin: auto;
+    padding: .65rem 1.2rem 4rem;
+    background: transparent !important;
+    min-height: 100vh;
+}
+
 .xp-menubar {
     background: #f5f3eb;
     color: #111;
@@ -120,7 +134,6 @@ div[role="radiogroup"] p {
     font-size: .84rem;
 }
 
-/* XP blue section headers */
 .xp-section {
     background: linear-gradient(#3f93ff, var(--xp-blue-dark));
     color: white;
@@ -132,7 +145,7 @@ div[role="radiogroup"] p {
     text-shadow: 1px 1px #16448a;
 }
 
-/* Market pulse cards */
+/* Market Pulse */
 div[data-testid="stMetric"] {
     background: var(--xp-card) !important;
     border: 1px solid #888;
@@ -158,7 +171,7 @@ div[data-testid="stMetricLabel"] p {
     font-weight: 400 !important;
 }
 
-/* Job card shell. Important: force every inner Streamlit block to opaque ivory. */
+/* Opaque XP job cards */
 div[data-testid="stVerticalBlockBorderWrapper"] {
     background: var(--xp-card) !important;
     border: 1px solid var(--xp-border) !important;
@@ -171,7 +184,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div,
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"],
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"],
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stColumn"] {
-    background: var(--xp-card) !important;
+    background-color: var(--xp-card) !important;
 }
 div[data-testid="stVerticalBlockBorderWrapper"] > div {
     padding-top: .12rem !important;
@@ -182,7 +195,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     color: #111 !important;
 }
 
-/* Each job gets a real XP window title bar */
 .job-titlebar {
     display: flex;
     align-items: center;
@@ -276,37 +288,25 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     background: linear-gradient(#fffef0, #f2e7ad) !important;
 }
 
-/* Fully XP-style Selectbox / Multiselect, including the arrow region */
-div[data-testid="stSelectbox"] div[data-baseweb="select"],
-div[data-testid="stMultiSelect"] div[data-baseweb="select"],
-div[data-baseweb="select"] {
-    background: #fff !important;
+/* Force every layer of Selectbox/Multiselect to XP white. */
+div[data-testid="stSelectbox"] [data-baseweb="select"],
+div[data-testid="stSelectbox"] [data-baseweb="select"] *,
+div[data-testid="stMultiSelect"] [data-baseweb="select"],
+div[data-testid="stMultiSelect"] [data-baseweb="select"] * {
+    background-color: #fff !important;
     color: #111 !important;
 }
-div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
-div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div,
-div[data-baseweb="select"] > div,
-[role="combobox"] {
+div[data-testid="stSelectbox"] [role="combobox"],
+div[data-testid="stMultiSelect"] [role="combobox"],
+div[data-baseweb="select"] > div {
     background: #fff !important;
-    color: #111 !important;
     border-color: var(--xp-border) !important;
     border-radius: 2px !important;
-}
-div[data-baseweb="select"] > div > div:last-child,
-div[data-baseweb="select"] > div > div:last-child > div,
-div[data-baseweb="select"] [aria-hidden="true"],
-div[data-baseweb="select"] [role="presentation"] {
-    background: #fff !important;
     color: #111 !important;
 }
-div[data-baseweb="select"] *,
-div[data-testid="stSelectbox"] *,
-div[data-testid="stMultiSelect"] * {
-    color: #111 !important;
-}
-div[data-baseweb="select"] svg,
 div[data-testid="stSelectbox"] svg,
-div[data-testid="stMultiSelect"] svg {
+div[data-testid="stMultiSelect"] svg,
+div[data-baseweb="select"] svg {
     fill: #111 !important;
     color: #111 !important;
     background: #fff !important;
@@ -318,10 +318,11 @@ div[data-testid="stMultiSelect"] svg {
 }
 [data-baseweb="tag"] *,
 [data-baseweb="tag"] span {
+    background: transparent !important;
     color: var(--xp-link) !important;
 }
 
-/* Score explanation = old Windows details pane */
+/* Why score pane */
 div[data-testid="stExpander"] {
     border: 1px solid var(--xp-border) !important;
     background: #fff !important;
@@ -350,7 +351,6 @@ div[data-testid="stExpander"] strong {
     color: #111 !important;
 }
 
-/* Remaining controls */
 [data-testid="stToggle"] p,
 .stMultiSelect label p,
 .stSelectbox label p,
@@ -367,7 +367,6 @@ div[data-testid="stDataFrame"] {
     overflow: hidden;
 }
 
-/* Taskbar */
 .taskbar {
     position: fixed;
     bottom: 0;
@@ -399,6 +398,7 @@ div[data-testid="stDataFrame"] {
 }
 
 @media(max-width:850px) {
+    .stApp:after { width: calc(100vw - 12px); }
     .block-container { padding-left: .5rem; padding-right: .5rem; }
     .task-name { display: none; }
     .job-titlebar { flex-wrap: wrap; }
