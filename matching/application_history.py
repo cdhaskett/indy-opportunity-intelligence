@@ -6,6 +6,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
+from auth_user import database_configured, is_logged_in
+
 
 def _clean(text: str | None) -> str:
     text = (text or "").lower()
@@ -36,7 +38,15 @@ def _similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
+def _persistent_mode() -> bool:
+    return database_configured() and is_logged_in()
+
+
 def load_history(path: Path) -> list[dict[str, Any]]:
+    if _persistent_mode():
+        from persistent_store import load_history as load_persistent_history
+
+        return load_persistent_history()
     if not path.exists():
         return []
     try:
@@ -53,6 +63,11 @@ def load_history(path: Path) -> list[dict[str, Any]]:
 
 
 def save_history(path: Path, rows: list[dict[str, Any]]) -> None:
+    if _persistent_mode():
+        from persistent_store import save_history as save_persistent_history
+
+        save_persistent_history(rows)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"applications": rows}
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
