@@ -7,4 +7,5 @@ data/jobs.db
 data/application_history.json
 data/application_history.csv
 data/user_profile.json
+data/market_state.json
 .DS_Store
