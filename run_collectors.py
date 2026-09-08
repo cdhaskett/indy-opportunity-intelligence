@@ -8,6 +8,7 @@ from pathlib import Path
 from collectors.ashby import fetch_ashby_jobs
 from collectors.greenhouse import fetch_greenhouse_jobs
 from collectors.lever import fetch_lever_jobs
+from collectors.smartrecruiters import fetch_smartrecruiters_jobs
 from collectors.workday import fetch_workday_jobs
 from data.db import upsert_jobs
 from matching.scorer import score_job
@@ -37,6 +38,7 @@ COLLECTORS = {
     "lever": fetch_lever_jobs,
     "ashby": fetch_ashby_jobs,
     "workday": fetch_workday_jobs,
+    "smartrecruiters": fetch_smartrecruiters_jobs,
 }
 
 
