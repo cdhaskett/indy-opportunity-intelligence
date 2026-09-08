@@ -36,14 +36,17 @@ CREATE TABLE IF NOT EXISTS outcomes (
 );
 """
 
+
 def connect():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def initialize():
     with connect() as conn:
         conn.executescript(SCHEMA)
+
 
 def upsert_jobs(jobs: Iterable[Dict]):
     initialize()
@@ -79,12 +82,14 @@ def upsert_jobs(jobs: Iterable[Dict]):
                 )
             )
 
+
 def list_jobs():
     initialize()
     with connect() as conn:
         return [dict(r) for r in conn.execute(
             "SELECT * FROM jobs ORDER BY score DESC, date_found DESC"
         ).fetchall()]
+
 
 def update_status(job_id: int, status: str):
     initialize()
@@ -94,3 +99,19 @@ def update_status(job_id: int, status: str):
             "INSERT INTO outcomes(job_id, status) VALUES (?, ?)",
             (job_id, status)
         )
+
+
+def count_today_status(status: str) -> int:
+    """Count distinct jobs moved into a status today using SQLite local time."""
+    initialize()
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(DISTINCT job_id) AS n
+            FROM outcomes
+            WHERE status = ?
+              AND date(changed_at, 'localtime') = date('now', 'localtime')
+            """,
+            (status,),
+        ).fetchone()
+    return int(row["n"] if row else 0)
