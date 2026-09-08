@@ -61,6 +61,12 @@ c4.metric("Interviews", int((df["status"] == "interview").sum()))
 
 st.subheader("Today's Market")
 
+show_processed = st.toggle(
+    "Show jobs I've already handled",
+    value=False,
+    help="Applied, interview, rejected, withdrawn, and other completed statuses stay in your database but are hidden from the main queue by default.",
+)
+
 filter_a, filter_b, filter_c = st.columns(3)
 with filter_a:
     verdict_filter = st.multiselect(
@@ -76,6 +82,12 @@ with filter_c:
     status_filter = st.multiselect("Status", status_options)
 
 view = df[df["verdict"].isin(verdict_filter)].copy()
+
+# Keep Today's Market as a work queue. Once a job is acted on, hide it from
+# the default list but retain it in SQLite for outcome analytics.
+if not show_processed and not status_filter:
+    view = view[view["status"].isin(["new", "saved"])]
+
 if company_filter:
     view = view[view["company"].isin(company_filter)]
 if status_filter:
@@ -83,6 +95,9 @@ if status_filter:
 
 view = view.sort_values(["score", "date_found"], ascending=[False, False])
 statuses = ["new", "saved", "applied", "screen", "interview", "final", "offer", "rejected", "withdrawn"]
+
+if view.empty:
+    st.success("Your current queue is clear. Turn on **Show jobs I've already handled** or refresh live jobs to see more.")
 
 for _, row in view.iterrows():
     details = score_details[row["id"]]
