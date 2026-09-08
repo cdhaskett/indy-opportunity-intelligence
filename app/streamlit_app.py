@@ -35,14 +35,20 @@ st.markdown(
     --xp-blue-line: #06459e;
     --xp-ivory: #ece9d8;
     --xp-card: #fffef5;
-    --xp-white: #ffffff;
     --xp-border: #7f9db9;
     --xp-text: #111111;
     --xp-link: #10479d;
+    --workspace: min(1540px, calc(100vw - 48px));
 }
 
 html, body, [class*="css"] {
     font-family: Tahoma, Arial, sans-serif;
+}
+
+html, body, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    overflow-x: hidden !important;
 }
 
 /* Bliss-inspired desktop wallpaper */
@@ -72,34 +78,38 @@ html, body, [class*="css"] {
       radial-gradient(ellipse at 92% 108%, #45a83b 0 38%, transparent 38.4%);
 }
 
-/* Permanent Explorer window backdrop. It stays put when the page scrolls. */
+/* One permanent Explorer window behind the complete scroll surface */
 .stApp:after {
     content: "";
     position: fixed;
-    z-index: 0;
     top: 0;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: min(1540px, calc(100vw - 48px));
+    width: var(--workspace);
+    z-index: 0;
+    pointer-events: none;
     background: var(--xp-ivory);
     border-left: 1px solid #7697bd;
     border-right: 1px solid #7697bd;
     box-shadow: 0 0 25px #285b8a88;
-    pointer-events: none;
 }
 
 .block-container,
 [data-testid="stMainBlockContainer"] {
     position: relative;
     z-index: 1;
-    max-width: 1540px;
-    margin: auto;
-    padding: .65rem 1.2rem 4rem;
+    width: var(--workspace) !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    padding: .65rem 1.2rem 4rem !important;
     background: transparent !important;
     min-height: 100vh;
+    overflow-x: clip !important;
 }
 
+/* XP menu / navigation */
 .xp-menubar {
     background: #f5f3eb;
     color: #111;
@@ -112,6 +122,11 @@ html, body, [class*="css"] {
 }
 
 div[role="radiogroup"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: .1rem;
+    max-width: 100%;
+    box-sizing: border-box;
     background: #ece9d8;
     border: 1px solid #aca899;
     padding: .22rem;
@@ -119,15 +134,18 @@ div[role="radiogroup"] {
     margin: .25rem 0 .55rem;
     box-shadow: inset 1px 1px #fff;
 }
+
 div[role="radiogroup"] label {
     padding: .28rem .48rem;
     border: 1px solid transparent;
     border-radius: 2px;
 }
+
 div[role="radiogroup"] label:hover {
     background: #fff;
     border-color: var(--xp-border);
 }
+
 div[role="radiogroup"] p {
     color: #111 !important;
     font-weight: bold;
@@ -145,7 +163,7 @@ div[role="radiogroup"] p {
     text-shadow: 1px 1px #16448a;
 }
 
-/* Market Pulse */
+/* Market pulse */
 div[data-testid="stMetric"] {
     background: var(--xp-card) !important;
     border: 1px solid #888;
@@ -155,6 +173,7 @@ div[data-testid="stMetric"] {
     min-height: 78px;
     box-shadow: 1px 1px 0 #777;
 }
+
 [data-testid="stMetricLabel"],
 [data-testid="stMetricLabel"] *,
 div[data-testid="stMetricLabel"] p {
@@ -164,6 +183,7 @@ div[data-testid="stMetricLabel"] p {
     font-size: .76rem !important;
     font-weight: 700 !important;
 }
+
 [data-testid="stMetricValue"],
 [data-testid="stMetricValue"] * {
     color: #111 !important;
@@ -171,25 +191,29 @@ div[data-testid="stMetricLabel"] p {
     font-weight: 400 !important;
 }
 
-/* Opaque XP job cards */
+/* Job card shell */
 div[data-testid="stVerticalBlockBorderWrapper"] {
     background: var(--xp-card) !important;
     border: 1px solid var(--xp-border) !important;
     border-radius: 4px !important;
     box-shadow: inset 1px 1px #fff !important;
     margin-bottom: .48rem;
-    overflow: hidden;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
 }
+
 div[data-testid="stVerticalBlockBorderWrapper"] > div,
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"],
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stHorizontalBlock"],
 div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stColumn"] {
     background-color: var(--xp-card) !important;
 }
+
 div[data-testid="stVerticalBlockBorderWrapper"] > div {
     padding-top: .12rem !important;
     padding-bottom: .12rem !important;
 }
+
 div[data-testid="stVerticalBlockBorderWrapper"] p,
 div[data-testid="stVerticalBlockBorderWrapper"] label {
     color: #111 !important;
@@ -200,21 +224,25 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     align-items: center;
     gap: .45rem;
     width: 100%;
+    box-sizing: border-box;
     padding: .34rem .48rem;
     margin: -.02rem 0 .34rem;
-    background: linear-gradient(180deg, #3f93ff 0%, #0c63df 48%, #0753c7 100%);
+    overflow: hidden;
+    background: linear-gradient(180deg, #3f93ff 0%, #0c63df 48%, #0753c7 100%) !important;
     border: 1px solid var(--xp-blue-line);
     color: #fff !important;
     text-shadow: 1px 1px #16448a;
-    box-sizing: border-box;
 }
+
 .job-title-text {
     color: #fff !important;
     font-size: .96rem;
     font-weight: 700;
     flex: 1;
     min-width: 0;
+    overflow-wrap: anywhere;
 }
+
 .score {
     min-width: 2.05rem;
     text-align: center;
@@ -227,6 +255,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     font-weight: bold;
     text-shadow: 1px 1px #287332;
 }
+
 .salary {
     flex: 0 0 auto;
     background: #ffdf57;
@@ -238,10 +267,12 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     font-weight: bold;
     text-shadow: none;
 }
+
 .meta {
     font-size: .80rem;
     color: #333 !important;
     margin: .06rem 0 .28rem;
+    overflow-wrap: anywhere;
 }
 .meta b { color: #111 !important; }
 
@@ -283,19 +314,23 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     padding-top: .15rem !important;
     padding-bottom: .15rem !important;
 }
+
 .stButton > button:hover,
 .stLinkButton > a:hover {
     background: linear-gradient(#fffef0, #f2e7ad) !important;
 }
 
-/* Force every layer of Selectbox/Multiselect to XP white. */
+/* XP select / multiselect */
 div[data-testid="stSelectbox"] [data-baseweb="select"],
 div[data-testid="stSelectbox"] [data-baseweb="select"] *,
 div[data-testid="stMultiSelect"] [data-baseweb="select"],
 div[data-testid="stMultiSelect"] [data-baseweb="select"] * {
     background-color: #fff !important;
     color: #111 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
+
 div[data-testid="stSelectbox"] [role="combobox"],
 div[data-testid="stMultiSelect"] [role="combobox"],
 div[data-baseweb="select"] > div {
@@ -304,6 +339,7 @@ div[data-baseweb="select"] > div {
     border-radius: 2px !important;
     color: #111 !important;
 }
+
 div[data-testid="stSelectbox"] svg,
 div[data-testid="stMultiSelect"] svg,
 div[data-baseweb="select"] svg {
@@ -311,11 +347,13 @@ div[data-baseweb="select"] svg {
     color: #111 !important;
     background: #fff !important;
 }
+
 [data-baseweb="tag"] {
     background: #dbe8f7 !important;
     border: 1px solid var(--xp-border) !important;
     border-radius: 2px !important;
 }
+
 [data-baseweb="tag"] *,
 [data-baseweb="tag"] span {
     background: transparent !important;
@@ -327,24 +365,30 @@ div[data-testid="stExpander"] {
     border: 1px solid var(--xp-border) !important;
     background: #fff !important;
     border-radius: 2px !important;
+    width: 100%;
     max-width: 390px;
+    box-sizing: border-box;
 }
+
 div[data-testid="stExpander"] > div,
 div[data-testid="stExpander"] details,
 div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
     background: #fff !important;
 }
+
 div[data-testid="stExpander"] summary {
     background: linear-gradient(#f7fbff, #dceaf8) !important;
     min-height: 1.72rem;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
 }
+
 div[data-testid="stExpander"] summary p {
     color: var(--xp-link) !important;
     font-size: .76rem;
     font-weight: 700;
 }
+
 div[data-testid="stExpander"] p,
 div[data-testid="stExpander"] li,
 div[data-testid="stExpander"] strong {
@@ -357,16 +401,19 @@ div[data-testid="stExpander"] strong {
 .stFileUploader label p {
     color: #111 !important;
 }
+
 .stCaption p,
 [data-testid="stCaptionContainer"] p {
     color: #4e5f6f !important;
 }
+
 div[data-testid="stDataFrame"] {
     border: 1px solid var(--xp-border);
     border-radius: 0;
     overflow: hidden;
 }
 
+/* Taskbar */
 .taskbar {
     position: fixed;
     bottom: 0;
@@ -379,6 +426,7 @@ div[data-testid="stDataFrame"] {
     padding: .35rem .5rem;
     box-shadow: 0 -1px 4px #0005;
 }
+
 .start {
     background: linear-gradient(#6bc65c, #2e9a2e);
     border: 1px solid #1d7d1d;
@@ -388,6 +436,7 @@ div[data-testid="stDataFrame"] {
     font-style: italic;
     text-shadow: 1px 1px #1c681d;
 }
+
 .task-name {
     margin-left: .55rem;
     background: #1e66c9;
@@ -397,11 +446,37 @@ div[data-testid="stDataFrame"] {
     display: inline-block;
 }
 
-@media(max-width:850px) {
-    .stApp:after { width: calc(100vw - 12px); }
-    .block-container { padding-left: .5rem; padding-right: .5rem; }
-    .task-name { display: none; }
-    .job-titlebar { flex-wrap: wrap; }
+@media (max-width: 900px) {
+    :root { --workspace: calc(100vw - 12px); }
+
+    .block-container,
+    [data-testid="stMainBlockContainer"] {
+        padding-left: .55rem !important;
+        padding-right: .55rem !important;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        gap: .45rem !important;
+    }
+
+    [data-testid="stColumn"] {
+        min-width: min(100%, 280px) !important;
+        flex: 1 1 280px !important;
+        width: auto !important;
+    }
+
+    div[role="radiogroup"] {
+        width: 100%;
+    }
+
+    .job-titlebar {
+        flex-wrap: wrap;
+    }
+
+    .task-name {
+        display: none;
+    }
 }
 </style>
 """,
@@ -476,6 +551,7 @@ def explain(row):
             ("Compensation", "salary"),
         ]:
             st.write(f"**{label}:** {details[key]['score']}/{details[key]['max']}")
+
         matched = list(dict.fromkeys(
             details["skills"].get("strong_matches", [])
             + details["skills"].get("secondary_matches", [])
@@ -484,6 +560,7 @@ def explain(row):
         ))
         if matched:
             st.write("**Matched signals:** " + ", ".join(matched[:14]))
+
         for finding in details.get("hard_requirements", {}).get("findings", []):
             years = (
                 f"{finding.get('years')}+ years"
@@ -512,10 +589,7 @@ if section == "🏠 Job Market":
         & (df["history_match"] != "exact")
     ].copy()
 
-    st.markdown(
-        '<div class="xp-section">📊 Market Pulse</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="xp-section">📊 Market Pulse</div>', unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Market Watch", len(df))
     c2.metric("Apply Now", int((active["verdict"] == "APPLY").sum()))
@@ -523,10 +597,7 @@ if section == "🏠 Job Market":
     c4.metric("Already Applied", int((df["history_match"] == "exact").sum()))
     c5.metric("Review Duplicates", int((df["history_match"] == "possible").sum()))
 
-    st.markdown(
-        '<div class="xp-section">📂 Today’s Shortlist</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="xp-section">📂 Today’s Shortlist</div>', unsafe_allow_html=True)
     st.caption(
         f"Duplicate guard active · {len(history)} private application-history records loaded"
     )
@@ -558,19 +629,14 @@ if section == "🏠 Job Market":
         view = view[view["company"].isin(company_filter)]
     if status_filter:
         view = view[view["status"].isin(status_filter)]
-    view = view.sort_values(
-        ["score", "date_found"],
-        ascending=[False, False],
-    )
+
+    view = view.sort_values(["score", "date_found"], ascending=[False, False])
 
     for _, row in view.iterrows():
         with st.container(border=True):
             pay = salary_label(row)
-            pay_html = (
-                f'<span class="salary">💵 {pay}</span>'
-                if pay
-                else ""
-            )
+            pay_html = f'<span class="salary">💵 {pay}</span>' if pay else ""
+
             st.markdown(
                 f'<div class="job-titlebar">'
                 f'<span class="score">{int(row["score"])}</span>'
@@ -580,6 +646,7 @@ if section == "🏠 Job Market":
             )
 
             left, right = st.columns([5.6, 1])
+
             with left:
                 st.markdown(
                     f'<div class="meta"><b>{row["company"]}</b> · '
@@ -619,11 +686,7 @@ if section == "🏠 Job Market":
                     explain(row)
 
             with right:
-                current = (
-                    row["status"]
-                    if row["status"] in statuses
-                    else "new"
-                )
+                current = row["status"] if row["status"] in statuses else "new"
                 new_status = st.selectbox(
                     "Status",
                     statuses,
@@ -635,56 +698,38 @@ if section == "🏠 Job Market":
                     st.rerun()
 
 elif section == "🌐 Market Coverage":
-    st.markdown(
-        '<div class="xp-section">🌐 Market Coverage</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="xp-section">🌐 Market Coverage</div>', unsafe_allow_html=True)
     live = pd.DataFrame(LIVE_REGISTRY["employers"])
     watch = pd.DataFrame(WATCHLIST["employers"])
+
     c1, c2, c3 = st.columns(3)
     c1.metric("Connected Employers", len(live))
     c2.metric("Expansion Watchlist", len(watch))
     c3.metric("High Priority Gaps", int((watch["priority"] == "high").sum()))
+
     st.dataframe(live, width="stretch", hide_index=True)
     st.dataframe(watch, width="stretch", hide_index=True)
 
 else:
-    st.markdown(
-        '<div class="xp-section">📂 My Applications</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="xp-section">📂 My Applications</div>', unsafe_allow_html=True)
+
     uploaded = st.file_uploader("Import application history", type=["json"])
     if uploaded:
         try:
             payload = json.loads(uploaded.getvalue().decode())
-            items = (
-                payload.get("applications", [])
-                if isinstance(payload, dict)
-                else payload
-            )
-            save_history(
-                HISTORY_PATH,
-                [x for x in items if isinstance(x, dict)],
-            )
+            items = payload.get("applications", []) if isinstance(payload, dict) else payload
+            save_history(HISTORY_PATH, [x for x in items if isinstance(x, dict)])
             st.success("History imported.")
             st.rerun()
         except Exception as exc:
             st.error(str(exc))
 
     if history:
-        st.dataframe(
-            pd.DataFrame(history),
-            width="stretch",
-            hide_index=True,
-        )
+        st.dataframe(pd.DataFrame(history), width="stretch", hide_index=True)
 
     if not df.empty:
         handled = df[~df["status"].isin(["new", "saved"])]
-        st.dataframe(
-            handled,
-            width="stretch",
-            hide_index=True,
-        )
+        st.dataframe(handled, width="stretch", hide_index=True)
 
 st.markdown(
     '<div class="taskbar">'
