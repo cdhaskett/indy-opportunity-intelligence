@@ -14,6 +14,7 @@ from matching.scorer import score_job
 ROOT = Path(__file__).resolve().parent
 PROFILE = json.loads((ROOT / "data" / "candidate_profile.json").read_text())
 REGISTRY = json.loads((ROOT / "data" / "employers.json").read_text())
+DISCOVERY_PATH = ROOT / "data" / "discovered_jobs.json"
 
 LOCAL_MARKERS = [
     "indianapolis", "carmel", "fishers", "noblesville", "westfield",
@@ -55,6 +56,25 @@ def market_eligible(job: dict) -> bool:
 
     return False
 
+def score_and_add(job: dict, collected: list[dict]) -> None:
+    score, detail = score_job(job, PROFILE)
+    job["score"] = score
+    job["verdict"] = detail["verdict"]
+    collected.append(job)
+
+def load_discovery_jobs(collected: list[dict]) -> int:
+    """Load verified public-web discoveries for employers whose ATS is not integrated yet."""
+    if not DISCOVERY_PATH.exists():
+        return 0
+    payload = json.loads(DISCOVERY_PATH.read_text(encoding="utf-8"))
+    count = 0
+    for job in payload.get("jobs", []):
+        if not market_eligible(job):
+            continue
+        score_and_add(dict(job), collected)
+        count += 1
+    return count
+
 def run(priority: str | None = None):
     collected = []
     failures = []
@@ -79,12 +99,13 @@ def run(priority: str | None = None):
                 continue
             eligible += 1
             job["company"] = employer["name"]
-            score, detail = score_job(job, PROFILE)
-            job["score"] = score
-            job["verdict"] = detail["verdict"]
-            collected.append(job)
+            score_and_add(job, collected)
 
         print(f"{employer['name']}: {len(jobs)} fetched / {eligible} in market")
+
+    discovery_count = load_discovery_jobs(collected)
+    if discovery_count:
+        print(f"Discovery feed: {discovery_count} verified jobs from non-integrated employers")
 
     upsert_jobs(collected)
     print(f"\nSaved/updated {len(collected)} market-eligible jobs.")
