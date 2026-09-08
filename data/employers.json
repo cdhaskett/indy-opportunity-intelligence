@@ -1,0 +1,15 @@
+{
+  "employers": [
+    {"name":"Clinical Architecture","ats":"greenhouse","board":"clinicalarchitecture","priority":"high","market_note":"Carmel/Indianapolis healthcare IT"},
+    {"name":"Precision AQ / Precision Medicine Group","ats":"greenhouse","board":"precisionmedicinegroup","priority":"high","market_note":"Indianapolis + US remote healthcare analytics"},
+    {"name":"Real Chemistry","ats":"greenhouse","board":"realchemistry","priority":"high","market_note":"Carmel + US remote healthcare/analytics"},
+    {"name":"New Era Technology","ats":"greenhouse","board":"neweratech","priority":"high","market_note":"Indianapolis technology/business operations"},
+    {"name":"The BAM Companies","ats":"greenhouse","board":"bamfam","priority":"medium","market_note":"Carmel/Indianapolis"},
+    {"name":"Burgess & Niple","ats":"greenhouse","board":"burgessniple","priority":"medium","market_note":"Indianapolis infrastructure/consulting"},
+    {"name":"Triumvirate Environmental","ats":"greenhouse","board":"triumvirateenvironmental","priority":"medium","market_note":"Indianapolis environmental services"},
+    {"name":"BME","ats":"greenhouse","board":"bmeasp","priority":"low","market_note":"Indianapolis operations/services"},
+    {"name":"House Buyers of America","ats":"greenhouse","board":"housebuyersofamerica","priority":"medium","market_note":"US remote roles surfaced for Indianapolis"},
+    {"name":"CSCI Consulting","ats":"greenhouse","board":"csciconsulting","priority":"medium","market_note":"Indianapolis federal/financial consulting"},
+    {"name":"EPIC Brokers","ats":"greenhouse","board":"edgewoodpartnersinsurancecenter","priority":"medium","market_note":"Carmel + US remote"}
+  ]
+}
