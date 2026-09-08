@@ -1,0 +1,7 @@
+- [x] Isolate personal main from shareable build
+- [x] No-code profile architecture
+- [x] Generalized scoring/location logic
+- [x] Shareable Streamlit entrypoint
+- [ ] Hosted authentication
+- [ ] Durable per-user profile/history storage
+- [ ] Public deployment
