@@ -8,6 +8,7 @@ from pathlib import Path
 from collectors.ashby import fetch_ashby_jobs
 from collectors.greenhouse import fetch_greenhouse_jobs
 from collectors.lever import fetch_lever_jobs
+from collectors.workday import fetch_workday_jobs
 from data.db import upsert_jobs
 from matching.scorer import score_job
 
@@ -22,7 +23,8 @@ LOCAL_MARKERS = [
 ]
 US_REMOTE_MARKERS = [
     "united states", "usa", "u.s.", "us remote", "remote - us",
-    "remote, us", "remote usa", "remote united states"
+    "remote, us", "remote usa", "remote united states", "us - remote",
+    "working from home us"
 ]
 NON_US_MARKERS = [
     "india", "canada", "united kingdom", "uk", "australia", "singapore",
@@ -34,19 +36,22 @@ COLLECTORS = {
     "greenhouse": fetch_greenhouse_jobs,
     "lever": fetch_lever_jobs,
     "ashby": fetch_ashby_jobs,
+    "workday": fetch_workday_jobs,
 }
+
 
 def is_indiana_location(location: str) -> bool:
     if any(x in location for x in LOCAL_MARKERS):
         return True
     return bool(re.search(r",\s*in(?:\s+\d{5})?(?:$|;)", location))
 
+
 def market_eligible(job: dict) -> bool:
     location = (job.get("location") or "").lower().strip()
     if is_indiana_location(location):
         return True
 
-    remote = bool(job.get("remote")) or "remote" in location
+    remote = bool(job.get("remote")) or "remote" in location or "working from home" in location
     if remote:
         if any(x in location for x in NON_US_MARKERS):
             return False
@@ -56,11 +61,13 @@ def market_eligible(job: dict) -> bool:
 
     return False
 
+
 def score_and_add(job: dict, collected: list[dict]) -> None:
     score, detail = score_job(job, PROFILE)
     job["score"] = score
     job["verdict"] = detail["verdict"]
     collected.append(job)
+
 
 def load_discovery_jobs(collected: list[dict]) -> int:
     """Load verified public-web discoveries for employers whose ATS is not integrated yet."""
@@ -75,6 +82,16 @@ def load_discovery_jobs(collected: list[dict]) -> int:
         count += 1
     return count
 
+
+def _collector_input(employer: dict):
+    """Keep simple ATS boards simple while allowing richer config-driven collectors."""
+    if employer["ats"] == "workday":
+        config = dict(employer["config"])
+        config["company"] = employer["name"]
+        return config
+    return employer["board"]
+
+
 def run(priority: str | None = None):
     collected = []
     failures = []
@@ -84,11 +101,13 @@ def run(priority: str | None = None):
             continue
 
         ats = employer["ats"]
-        board = employer["board"]
-        collector = COLLECTORS[ats]
+        collector = COLLECTORS.get(ats)
+        if collector is None:
+            failures.append((employer["name"], f"collector not implemented for {ats}"))
+            continue
 
         try:
-            jobs = collector(board)
+            jobs = collector(_collector_input(employer))
         except Exception as exc:
             failures.append((employer["name"], str(exc)))
             continue
@@ -101,7 +120,7 @@ def run(priority: str | None = None):
             job["company"] = employer["name"]
             score_and_add(job, collected)
 
-        print(f"{employer['name']}: {len(jobs)} fetched / {eligible} in market")
+        print(f"{employer['name']} [{ats}]: {len(jobs)} fetched / {eligible} in market")
 
     discovery_count = load_discovery_jobs(collected)
     if discovery_count:
@@ -114,6 +133,7 @@ def run(priority: str | None = None):
         print("\nCollector failures:")
         for company, error in failures:
             print(f"- {company}: {error}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
