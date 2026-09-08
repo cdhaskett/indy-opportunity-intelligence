@@ -11,6 +11,14 @@
     {"name":"House Buyers of America","ats":"greenhouse","board":"housebuyersofamerica","priority":"medium","market_note":"US remote roles surfaced for Indianapolis"},
     {"name":"CSCI Consulting","ats":"greenhouse","board":"csciconsulting","priority":"medium","market_note":"Indianapolis federal/financial consulting"},
     {"name":"EPIC Brokers","ats":"greenhouse","board":"edgewoodpartnersinsurancecenter","priority":"medium","market_note":"Carmel + US remote"},
+    {"name":"ActBlue","ats":"greenhouse","board":"actblue","priority":"high","market_note":"Remote-first progressive fundraising technology; data, operations, systems and product roles"},
+    {"name":"ACLU National","ats":"greenhouse","board":"aclu","priority":"high","market_note":"Civil-liberties nonprofit with national technology, data, operations and project roles; some roles allow US remote work"},
+
+    {"name":"Democratic National Committee","ats":"lever","board":"dnc","priority":"high","market_note":"Democratic political organization; data, analytics, technology, operations and campaign roles; remote when offered"},
+    {"name":"Planned Parenthood Federation of America","ats":"lever","board":"ppfa","priority":"high","market_note":"Mission-driven national nonprofit with remote operations, data, technology and business roles"},
+    {"name":"Run for Something","ats":"lever","board":"RunForSomething","priority":"high","market_note":"Remote-first progressive organization supporting down-ballot candidates; operations, data, finance and program roles"},
+
+    {"name":"Scale to Win","ats":"ashby","board":"scale-to-win-inc","priority":"high","market_note":"Fully remote progressive political-tech company; operations, data, product and systems roles"},
 
     {"name":"Rolls-Royce","ats":"workday","priority":"high","market_note":"Major Indianapolis employer; engineering, operations, analytics and business roles","config":{"host":"https://rollsroyce.wd3.myworkdayjobs.com","tenant":"rollsroyce","site":"professional","locale":"en-US","search_terms":["analyst","business","operations","data","systems","process improvement"]}},
     {"name":"Salesforce","ats":"workday","priority":"high","market_note":"Indianapolis hub; CRM, systems, operations and analytics roles","config":{"host":"https://salesforce.wd12.myworkdayjobs.com","tenant":"salesforce","site":"External_Career_Site","locale":"en-US","search_terms":["analyst","business systems","operations","data","crm","workday"]}},
