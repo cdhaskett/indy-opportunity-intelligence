@@ -12,20 +12,16 @@ from collectors.smartrecruiters import fetch_smartrecruiters_jobs
 from collectors.workday import fetch_workday_jobs
 from data.db import upsert_jobs
 from matching.scorer import score_job
+from profile_config import load_profile
 
 ROOT = Path(__file__).resolve().parent
-PROFILE = json.loads((ROOT / "data" / "candidate_profile.json").read_text())
 REGISTRY = json.loads((ROOT / "data" / "employers.json").read_text())
 DISCOVERY_PATH = ROOT / "data" / "discovered_jobs.json"
 
-LOCAL_MARKERS = [
-    "indianapolis", "carmel", "fishers", "noblesville", "westfield",
-    "greenwood", "plainfield", "avon", "anderson", "indiana",
-]
 US_REMOTE_MARKERS = [
     "united states", "usa", "u.s.", "us remote", "remote - us",
     "remote, us", "remote usa", "remote united states", "us - remote",
-    "working from home us"
+    "working from home us",
 ]
 EXPLICIT_US_REMOTE_PHRASES = [
     "eligible for remote work in the united states",
@@ -42,7 +38,7 @@ EXPLICIT_US_REMOTE_PHRASES = [
 NON_US_MARKERS = [
     "india", "canada", "united kingdom", "uk", "australia", "singapore",
     "malaysia", "mexico", "brazil", "argentina", "china", "taiwan",
-    "south korea"
+    "south korea",
 ]
 
 COLLECTORS = {
@@ -54,56 +50,73 @@ COLLECTORS = {
 }
 
 
-def is_indiana_location(location: str) -> bool:
-    if any(x in location for x in LOCAL_MARKERS):
-        return True
-    return bool(re.search(r",\s*in(?:\s+\d{5})?(?:$|;)", location))
+def _normalize_terms(values) -> list[str]:
+    return [str(v).strip().lower() for v in (values or []) if str(v).strip()]
 
 
-def market_eligible(job: dict) -> bool:
-    location = (job.get("location") or "").lower().strip()
-    description = (job.get("description") or "").lower()
-    if is_indiana_location(location):
-        return True
-
-    explicit_us_remote = any(phrase in description for phrase in EXPLICIT_US_REMOTE_PHRASES)
-    if explicit_us_remote:
-        return True
-
-    remote = bool(job.get("remote")) or "remote" in location or "working from home" in location
-    if remote:
-        if any(x in location for x in NON_US_MARKERS):
-            return False
-        if any(x in location for x in US_REMOTE_MARKERS):
+def location_matches(location: str, profile: dict) -> bool:
+    """Match a posting location against the current user's configured market."""
+    location = (location or "").lower().strip()
+    terms = _normalize_terms(profile.get("preferred_location_terms", []))
+    for term in terms:
+        if len(term) <= 2:
+            if re.search(rf"(?<![a-z]){re.escape(term)}(?![a-z])", location):
+                return True
+        elif term in location:
             return True
-        return location in {"remote", "remote - usa", "remote, usa", "anywhere in the us", "anywhere in the u.s."}
-
     return False
 
 
-def score_and_add(job: dict, collected: list[dict]) -> None:
-    score, detail = score_job(job, PROFILE)
+def market_eligible(job: dict, profile: dict) -> bool:
+    location = (job.get("location") or "").lower().strip()
+    description = (job.get("description") or "").lower()
+
+    if location_matches(location, profile):
+        return True
+
+    if not bool(profile.get("remote_ok", True)):
+        return False
+
+    if any(marker in location for marker in NON_US_MARKERS):
+        return False
+
+    if any(phrase in description for phrase in EXPLICIT_US_REMOTE_PHRASES):
+        return True
+
+    remote = bool(job.get("remote")) or "remote" in location or "working from home" in location
+    if not remote:
+        return False
+
+    if any(marker in location for marker in US_REMOTE_MARKERS):
+        return True
+
+    return location in {
+        "remote", "remote - usa", "remote, usa", "remote - us", "remote, us",
+        "anywhere in the us", "anywhere in the u.s.", "us remote",
+    }
+
+
+def score_and_add(job: dict, collected: list[dict], profile: dict) -> None:
+    score, detail = score_job(job, profile)
     job["score"] = score
     job["verdict"] = detail["verdict"]
     collected.append(job)
 
 
-def load_discovery_jobs(collected: list[dict]) -> int:
-    """Load verified public-web discoveries for employers whose ATS is not integrated yet."""
+def load_discovery_jobs(collected: list[dict], profile: dict) -> int:
     if not DISCOVERY_PATH.exists():
         return 0
     payload = json.loads(DISCOVERY_PATH.read_text(encoding="utf-8"))
     count = 0
     for job in payload.get("jobs", []):
-        if not market_eligible(job):
+        if not market_eligible(job, profile):
             continue
-        score_and_add(dict(job), collected)
+        score_and_add(dict(job), collected, profile)
         count += 1
     return count
 
 
 def _collector_input(employer: dict):
-    """Keep simple ATS boards simple while allowing richer config-driven collectors."""
     if employer["ats"] == "workday":
         config = dict(employer["config"])
         config["company"] = employer["name"]
@@ -112,6 +125,7 @@ def _collector_input(employer: dict):
 
 
 def run(priority: str | None = None):
+    profile = load_profile()
     collected = []
     failures = []
 
@@ -133,15 +147,15 @@ def run(priority: str | None = None):
 
         eligible = 0
         for job in jobs:
-            if not market_eligible(job):
+            if not market_eligible(job, profile):
                 continue
             eligible += 1
             job["company"] = employer["name"]
-            score_and_add(job, collected)
+            score_and_add(job, collected, profile)
 
         print(f"{employer['name']} [{ats}]: {len(jobs)} fetched / {eligible} in market")
 
-    discovery_count = load_discovery_jobs(collected)
+    discovery_count = load_discovery_jobs(collected, profile)
     if discovery_count:
         print(f"Discovery feed: {discovery_count} verified jobs from non-integrated employers")
 
