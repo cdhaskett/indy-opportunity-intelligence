@@ -32,11 +32,104 @@ ANALYST_TERMS = [
     "continuous improvement analyst"
 ]
 
+# Domains where years of direct functional experience can be a real gate rather
+# than a transferable-skills preference. These only matter when paired with
+# explicit requirement language.
+DOMAIN_TERMS = {
+    "HR / People Operations": [
+        "hr operations", "human resources", "hr generalist", "people operations",
+        "employee relations", "shared services", "workday hcm", "payroll operations",
+        "benefits administration", "talent operations"
+    ],
+    "Healthcare / Clinical": [
+        "clinical experience", "healthcare experience", "hospital experience",
+        "health system", "payer experience", "provider experience", "clinical operations"
+    ],
+    "Finance / Accounting": [
+        "accounting experience", "finance experience", "financial accounting",
+        "gaap", "fp&a", "financial planning and analysis", "public accounting"
+    ],
+    "Insurance": [
+        "insurance experience", "claims experience", "underwriting experience",
+        "actuarial experience", "property and casualty", "p&c insurance"
+    ],
+    "Legal / Compliance": [
+        "legal experience", "law firm experience", "regulatory compliance experience",
+        "paralegal experience", "legal operations"
+    ],
+    "Supply Chain / Procurement": [
+        "supply chain experience", "procurement experience", "purchasing experience",
+        "logistics experience", "warehouse operations experience"
+    ],
+}
+
+# Domains supported by the candidate's background strongly enough that an
+# explicit domain requirement should not be treated as a gap.
+PROFILE_DOMAIN_STRENGTHS = {
+    "Supply Chain / Procurement",
+}
+
+REQUIREMENT_CUES = [
+    "required", "requirement", "must have", "minimum", "at least",
+    "years of", "years experience", "years of experience", "proven experience",
+    "direct experience", "prior experience", "demonstrated experience"
+]
+
+
 def normalize(text: str | None) -> str:
     return re.sub(r"\s+", " ", (text or "").lower()).strip()
 
+
 def contains_any(text: str, terms: List[str]) -> List[str]:
     return [term for term in terms if term in text]
+
+
+def detect_hard_domain_requirements(description: str) -> List[Dict]:
+    """Find explicit domain-experience gates without penalizing casual mentions."""
+    findings: List[Dict] = []
+    # Split loosely into sentences/bullets so requirement cues and domain terms
+    # need to occur near one another.
+    chunks = [c.strip() for c in re.split(r"[\n\r•]|(?<=[.!?])\s+", description) if c.strip()]
+
+    for domain, terms in DOMAIN_TERMS.items():
+        if domain in PROFILE_DOMAIN_STRENGTHS:
+            continue
+        for chunk in chunks:
+            domain_hits = contains_any(chunk, terms)
+            if not domain_hits:
+                continue
+            cue_hits = contains_any(chunk, REQUIREMENT_CUES)
+            years_match = re.search(r"\b(\d+)\s*\+?\s*(?:years?|yrs?)\b", chunk)
+            if not cue_hits and not years_match:
+                continue
+
+            years = int(years_match.group(1)) if years_match else None
+            # Explicit multi-year requirements are more serious than generic
+            # "experience required" wording.
+            if years is not None and years >= 4:
+                penalty = 18
+                severity = "high"
+            elif years is not None and years >= 2:
+                penalty = 12
+                severity = "medium"
+            else:
+                penalty = 9
+                severity = "medium"
+
+            findings.append({
+                "domain": domain,
+                "terms": domain_hits,
+                "years": years,
+                "penalty": penalty,
+                "severity": severity,
+                "evidence": chunk[:260],
+            })
+            break
+
+    # Multiple unrelated domain gates should matter, but cap the deduction so a
+    # single parsing mistake cannot zero out an otherwise relevant role.
+    return findings
+
 
 def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     title = normalize(job.get("title"))
@@ -47,7 +140,6 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     details = {}
     total = 0
 
-    # Job-family fit: exact target titles score highest; analyst-family roles still get strong credit.
     title_matches = contains_any(title, profile["target_titles"])
     analyst_matches = contains_any(title, ANALYST_TERMS)
     if title_matches:
@@ -61,7 +153,6 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     total += title_score
     details["title"] = {"score": title_score, "max": WEIGHTS["title"], "matches": title_matches or analyst_matches}
 
-    # Skills: fewer matches are required to demonstrate a credible fit; secondary skills still help.
     strong = contains_any(combined, profile["strong_skills"])
     secondary = contains_any(combined, profile["secondary_skills"])
     raw = min(1.0, (len(strong) + len(secondary) * 0.5) / 5.0)
@@ -74,7 +165,6 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         "secondary_matches": secondary,
     }
 
-    # Seniority: analyst/senior analyst is the sweet spot; leadership/engineering seniority is penalized.
     bad_seniority = contains_any(title, profile["deprioritize_seniority"])
     if bad_seniority:
         seniority_score = 2
@@ -89,13 +179,11 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     total += seniority_score
     details["seniority"] = {"score": seniority_score, "max": WEIGHTS["seniority"], "warnings": bad_seniority}
 
-    # Process/operations is a core part of the target profile and can carry a non-CRM role.
     process_matches = contains_any(combined, PROCESS_TERMS)
     process_score = min(WEIGHTS["process_ops"], len(set(process_matches)) * 4)
     total += process_score
     details["process_ops"] = {"score": process_score, "max": WEIGHTS["process_ops"], "matches": process_matches}
 
-    # CRM/Power Platform is a useful bonus, not a universal requirement.
     crm_matches = contains_any(combined, CRM_TERMS)
     crm_score = min(WEIGHTS["crm_power_platform"], len(set(crm_matches)) * 3)
     total += crm_score
@@ -114,7 +202,7 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
 
     salary_min = job.get("salary_min")
     if salary_min is None:
-        salary_score = 3  # Unknown compensation should not tank an otherwise strong role.
+        salary_score = 3
     elif salary_min >= profile["salary_target"]:
         salary_score = WEIGHTS["salary"]
     elif salary_min >= profile["salary_floor"]:
@@ -129,9 +217,17 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         total -= 20
         details["avoid"] = avoid
 
+    hard_domains = detect_hard_domain_requirements(description)
+    domain_penalty = min(24, sum(item["penalty"] for item in hard_domains))
+    if domain_penalty:
+        total -= domain_penalty
+    details["hard_requirements"] = {
+        "penalty": domain_penalty,
+        "findings": hard_domains,
+    }
+
     total = max(0, min(100, int(round(total))))
 
-    # Alpha thresholds are intentionally recall-oriented. Outcome data will calibrate these later.
     if total >= 80:
         verdict = "APPLY"
     elif total >= 65:
