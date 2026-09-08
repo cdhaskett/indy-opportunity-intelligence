@@ -12,6 +12,7 @@ import streamlit as st
 
 from data.db import count_today_status, list_jobs, update_status
 from matching.application_history import load_history, match_history, save_history
+from matching.history_import import merge_application_history, read_application_file
 from matching.scorer import score_job
 from market_state import load_market_state, save_refresh_result
 from profile_config import (
@@ -61,6 +62,7 @@ html,body,.stApp{overflow-x:hidden!important}
 .steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.35rem;margin:.55rem 0 .8rem}
 .step{background:#dbe8f7;border:1px solid #7f9db9;color:#284b77;padding:.45rem .5rem;font-size:.78rem;font-weight:700;text-align:center}
 .summary{background:#fffef5;border:1px solid #aca899;padding:.55rem .7rem;margin:.35rem 0;color:#222;font-size:.82rem}
+.importbox{background:#fffef5;border:1px solid #7f9db9;box-shadow:inset 1px 1px #fff;padding:.7rem .8rem;margin:.35rem 0 .65rem;color:#222;font-size:.82rem}
 div[role="radiogroup"]{background:#ece9d8;border:1px solid #aca899;padding:.22rem;width:fit-content;max-width:100%;margin:.25rem 0 .55rem;box-shadow:inset 1px 1px #fff;flex-wrap:wrap!important}
 div[role="radiogroup"] p{color:#111!important;font-weight:700}
 div[data-testid="stMetric"]{background:var(--card)!important;border:1px solid #888;border-top-color:#fff;border-left-color:#fff;padding:.52rem .68rem;min-height:78px;box-shadow:1px 1px #777}
@@ -93,6 +95,81 @@ def split_terms(text: str) -> list[str]:
 
 def join_terms(values) -> str:
     return ", ".join(values or [])
+
+
+def import_application_history(existing_history: list[dict], key_prefix: str) -> bool:
+    st.markdown(
+        '<div class="importbox"><b>Already applying?</b><br>'
+        'Upload a CSV or Excel tracker. I’ll look for Company/Employer, Job Title/Role, '
+        'Date Applied and Status columns automatically. Only Company is required.</div>',
+        unsafe_allow_html=True,
+    )
+
+    template_csv = (
+        "Company,Job Title,Date Applied,Status,Requisition ID,Source\n"
+        "Example Company,Example Role,2026-09-01,Applied,,LinkedIn\n"
+    )
+    st.download_button(
+        "⬇ Download blank CSV template",
+        data=template_csv,
+        file_name="application_history_template.csv",
+        mime="text/csv",
+        key=f"{key_prefix}-template",
+    )
+
+    uploaded = st.file_uploader(
+        "Upload application history",
+        type=["csv", "xlsx"],
+        key=f"{key_prefix}-upload",
+        help="CSV and modern Excel (.xlsx) files are supported.",
+    )
+    if uploaded is None:
+        return False
+
+    try:
+        incoming, mapping, skipped = read_application_file(uploaded.getvalue(), uploaded.name)
+    except Exception as exc:
+        st.error(f"Could not read that file: {exc}")
+        return False
+
+    detected = ", ".join(
+        f"{canonical.replace('_', ' ').title()} → {source}"
+        for canonical, source in mapping.items()
+    )
+    st.caption(f"Detected {len(incoming)} usable applications · {detected}")
+    if "title" not in mapping:
+        st.warning(
+            "No job-title column was detected. These rows will still warn about prior companies, "
+            "but exact duplicate protection is stronger when Job Title is included."
+        )
+    if skipped:
+        st.warning(f"Skipped {len(skipped)} row(s) with no company/employer value.")
+
+    preview_cols = [
+        col
+        for col in ["company", "title", "date_applied", "status", "requisition_id", "source"]
+        if any(col in row for row in incoming)
+    ]
+    preview = pd.DataFrame(incoming)
+    st.dataframe(
+        preview[preview_cols].head(25) if preview_cols else preview.head(25),
+        use_container_width=True,
+        hide_index=True,
+    )
+    if len(incoming) > 25:
+        st.caption(f"Previewing the first 25 of {len(incoming)} rows.")
+
+    if st.button(
+        f"📥 Import {len(incoming)} applications",
+        key=f"{key_prefix}-commit",
+        use_container_width=True,
+    ):
+        merged, added = merge_application_history(existing_history, incoming)
+        save_history(HISTORY_PATH, merged)
+        st.session_state[f"{key_prefix}-import-result"] = added
+        return True
+
+    return False
 
 
 def build_profile(
@@ -389,9 +466,38 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+history = load_history(HISTORY_PATH)
+
 if "welcome_complete" in st.session_state:
-    completed_name = st.session_state.pop("welcome_complete")
-    st.success(f"Welcome, {completed_name}. Your profile is ready — refresh the market to build your shortlist.")
+    completed_name = st.session_state["welcome_complete"]
+    st.markdown('<div class="section">📥 Already applying?</div>', unsafe_allow_html=True)
+    st.success(f"Welcome, {completed_name}. Your profile is ready.")
+    imported = import_application_history(history, "onboarding-history")
+    a, b = st.columns([1, 3])
+    with a:
+        if st.button("Skip for now", use_container_width=True, key="skip-onboarding-history"):
+            st.session_state.pop("welcome_complete", None)
+            st.rerun()
+    with b:
+        st.caption("You can import application history later from My Applications.")
+
+    if imported:
+        added = st.session_state.pop("onboarding-history-import-result", 0)
+        st.session_state.pop("welcome_complete", None)
+        st.session_state["history_import_message"] = (
+            f"Imported {added} new application record(s). Duplicate protection is ready."
+        )
+        st.rerun()
+
+    st.markdown(
+        '<div class="taskbar"><span class="start">🪟 start</span>'
+        '<span class="task">📁 Opportunity Intelligence · Import History</span></div>',
+        unsafe_allow_html=True,
+    )
+    st.stop()
+
+if "history_import_message" in st.session_state:
+    st.success(st.session_state.pop("history_import_message"))
 
 section = st.radio(
     "Navigation",
@@ -400,7 +506,6 @@ section = st.radio(
     label_visibility="collapsed",
 )
 
-history = load_history(HISTORY_PATH)
 rows: list[dict] = []
 details_by_id: dict[int, dict] = {}
 history_matches: dict[int, dict] = {}
@@ -612,27 +717,24 @@ elif section == "📂 My Applications":
     st.markdown('<div class="section">📂 My Applications</div>', unsafe_allow_html=True)
     st.caption("This history is private to this user profile.")
 
-    uploaded = st.file_uploader(
-        "Import application history (optional)",
-        type=["json"],
-    )
-    if uploaded is not None:
-        try:
-            payload = json.loads(uploaded.getvalue().decode("utf-8"))
-            items = (
-                payload.get("applications", [])
-                if isinstance(payload, dict)
-                else payload
-            )
-            save_history(HISTORY_PATH, [x for x in items if isinstance(x, dict)])
-            st.success("Application history imported.")
-            st.rerun()
-        except Exception as exc:
-            st.error(f"Could not import that file: {exc}")
+    if "my-history-import-result" in st.session_state:
+        added = st.session_state.pop("my-history-import-result")
+        st.success(f"Imported {added} new application record(s). Duplicate protection has been updated.")
+
+    imported = import_application_history(history, "my-history")
+    if imported:
+        st.rerun()
 
     if history:
+        st.markdown("### Imported application history")
+        history_df = pd.DataFrame(history)
+        visible_history_cols = [
+            col
+            for col in ["company", "title", "date_applied", "status", "requisition_id", "source"]
+            if col in history_df.columns
+        ]
         st.dataframe(
-            pd.DataFrame(history),
+            history_df[visible_history_cols] if visible_history_cols else history_df,
             use_container_width=True,
             hide_index=True,
         )
