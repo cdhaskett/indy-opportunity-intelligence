@@ -1,0 +1,51 @@
+{
+  "name": "Job Seeker",
+  "target_titles": [
+    "business analyst",
+    "operations analyst"
+  ],
+  "title_family_terms": [
+    "analyst",
+    "specialist",
+    "coordinator"
+  ],
+  "strong_skills": [
+    "excel",
+    "data analysis",
+    "process improvement"
+  ],
+  "secondary_skills": [
+    "sql",
+    "reporting"
+  ],
+  "focus_terms": [
+    "operations",
+    "workflow",
+    "requirements",
+    "stakeholder",
+    "process improvement"
+  ],
+  "bonus_terms": [],
+  "preferred_location_terms": [
+    "your city",
+    "your state"
+  ],
+  "remote_ok": true,
+  "salary_target": 80000,
+  "salary_floor": 65000,
+  "employment_type": "full-time",
+  "avoid_terms": [
+    "commission only",
+    "door-to-door"
+  ],
+  "seniority_preferences": [
+    "analyst",
+    "specialist"
+  ],
+  "deprioritize_seniority": [
+    "director",
+    "vice president",
+    "chief"
+  ],
+  "domain_strengths": []
+}
