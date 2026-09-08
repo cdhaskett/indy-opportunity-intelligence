@@ -21,8 +21,170 @@ LIVE_REGISTRY = json.loads((ROOT / "data" / "employers.json").read_text())
 HISTORY_PATH = ROOT / "data" / "application_history.json"
 
 st.set_page_config(page_title="Indy Opportunity Intelligence", page_icon="🧭", layout="wide")
-st.title("🧭 Indy Opportunity Intelligence")
-st.caption("Live opportunity triage built around fit, not endless scrolling.")
+
+st.markdown(
+    """
+    <style>
+    :root {
+        --bg: #f7f4ee;
+        --card: #fffdfa;
+        --ink: #242424;
+        --muted: #74706a;
+        --accent: #3f5f5a;
+        --accent-2: #9f6f5d;
+        --line: #ddd6cc;
+        --soft: #ece7df;
+    }
+
+    .stApp {
+        background: linear-gradient(180deg, #fbf9f4 0%, var(--bg) 42%, #f3efe7 100%);
+        color: var(--ink);
+    }
+
+    .block-container {
+        max-width: 1320px;
+        padding-top: 2.2rem;
+        padding-bottom: 4rem;
+    }
+
+    h1, h2, h3 {
+        letter-spacing: -0.02em;
+    }
+
+    .hero {
+        padding: 1.1rem 1.25rem 1.25rem;
+        border: 1px solid var(--line);
+        background: rgba(255,253,250,.9);
+        border-radius: 24px;
+        box-shadow: 0 10px 30px rgba(60, 50, 40, .05);
+        margin-bottom: 1rem;
+    }
+
+    .hero-kicker {
+        text-transform: uppercase;
+        letter-spacing: .14em;
+        font-size: .72rem;
+        color: var(--accent-2);
+        font-weight: 700;
+        margin-bottom: .25rem;
+    }
+
+    .hero-title {
+        font-size: 2.25rem;
+        line-height: 1.05;
+        font-weight: 760;
+        color: var(--ink);
+        margin: 0;
+    }
+
+    .hero-subtitle {
+        margin-top: .5rem;
+        color: var(--muted);
+        font-size: 1rem;
+    }
+
+    div[data-testid="stMetric"] {
+        background: rgba(255,253,250,.8);
+        border: 1px solid var(--line);
+        padding: .9rem 1rem;
+        border-radius: 18px;
+        box-shadow: 0 5px 18px rgba(60, 50, 40, .035);
+    }
+
+    div[data-testid="stMetricLabel"] p {
+        color: var(--muted);
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        font-weight: 700;
+    }
+
+    div[data-testid="stMetricValue"] {
+        color: var(--ink);
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: rgba(255,253,250,.92);
+        border-color: var(--line) !important;
+        border-radius: 22px;
+        box-shadow: 0 8px 26px rgba(60, 50, 40, .045);
+    }
+
+    .job-title {
+        font-size: 1.28rem;
+        font-weight: 760;
+        line-height: 1.2;
+        color: var(--ink);
+        margin-bottom: .25rem;
+    }
+
+    .score-pill {
+        display: inline-block;
+        padding: .2rem .55rem;
+        margin-right: .45rem;
+        border-radius: 999px;
+        background: var(--accent);
+        color: white;
+        font-size: .82rem;
+        font-weight: 700;
+        vertical-align: 2px;
+    }
+
+    .salary-pill {
+        display: inline-block;
+        padding: .2rem .55rem;
+        margin-left: .35rem;
+        border-radius: 999px;
+        background: #eee4dc;
+        color: #6b4c40;
+        font-size: .82rem;
+        font-weight: 700;
+        vertical-align: 2px;
+    }
+
+    .job-meta {
+        color: var(--muted);
+        font-size: .93rem;
+        margin-bottom: .4rem;
+    }
+
+    .verdict-line {
+        color: #4d4a45;
+        font-size: .91rem;
+        margin-top: .15rem;
+    }
+
+    div[role="radiogroup"] {
+        background: rgba(255,253,250,.7);
+        border: 1px solid var(--line);
+        padding: .35rem;
+        border-radius: 16px;
+        width: fit-content;
+    }
+
+    .stButton > button, .stLinkButton > a {
+        border-radius: 999px !important;
+        font-weight: 650 !important;
+    }
+
+    hr {
+        border-color: var(--line);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <div class="hero">
+      <div class="hero-kicker">INDY OPPORTUNITY INTELLIGENCE</div>
+      <div class="hero-title">Find the few jobs actually worth your time.</div>
+      <div class="hero-subtitle">Central Indiana + remote role discovery, fit scoring, duplicate protection, and application tracking — without the endless scroll.</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 section = st.radio(
     "Navigation",
@@ -54,6 +216,27 @@ for raw_job in jobs:
 
 df = pd.DataFrame(rescored_jobs) if rescored_jobs else pd.DataFrame()
 status_options = ["new", "saved", "applied", "screen", "interview", "final", "offer", "rejected", "withdrawn"]
+
+
+def money(value):
+    if value is None or pd.isna(value):
+        return None
+    value = float(value)
+    if value >= 1000:
+        return f"${value/1000:.0f}K"
+    return f"${value:,.0f}"
+
+
+def salary_label(row):
+    low = money(row.get("salary_min"))
+    high = money(row.get("salary_max"))
+    if low and high:
+        return f"{low}–{high}"
+    if low:
+        return f"{low}+"
+    if high:
+        return f"Up to {high}"
+    return None
 
 
 def render_score_explanation(row):
@@ -89,31 +272,31 @@ def render_score_explanation(row):
 if section == "🔎 Job Market":
     refresh_col, note_col = st.columns([1, 4])
     with refresh_col:
-        if st.button("🔄 Refresh live jobs", width="stretch"):
-            with st.spinner("Checking employer ATS feeds and rescoring the market..."):
+        if st.button("↻ Refresh market", width="stretch"):
+            with st.spinner("Checking employer career systems and rescoring the market..."):
                 run_collectors()
-            st.success("Live job refresh complete.")
+            st.success("Market refresh complete.")
             st.rerun()
     with note_col:
-        st.caption("Central Indiana + U.S. remote roles from supported employer career systems.")
+        st.caption("Curated Central Indiana + U.S. remote roles from supported employer career systems.")
 
     if df.empty:
-        st.info("No jobs loaded yet. Click **Refresh live jobs** to pull the first market snapshot.")
+        st.info("No jobs loaded yet. Click **Refresh market** to pull the first market snapshot.")
         st.stop()
 
     exact_duplicates = int((df["history_match"] == "exact").sum()) if "history_match" in df else 0
     possible_duplicates = int((df["history_match"] == "possible").sum()) if "history_match" in df else 0
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Jobs found", len(df))
-    c2.metric("🔥 Apply", int((df["verdict"] == "APPLY").sum()))
-    c3.metric("👍 Strong consider", int((df["verdict"] == "STRONG CONSIDER").sum()))
+    c1.metric("Jobs monitored", len(df))
+    c2.metric("Apply now", int((df["verdict"] == "APPLY").sum()))
+    c3.metric("Strong consider", int((df["verdict"] == "STRONG CONSIDER").sum()))
     c4.metric("Already applied", exact_duplicates)
-    c5.metric("Possible duplicates", possible_duplicates)
+    c5.metric("Check duplicates", possible_duplicates)
 
-    st.subheader("Today's Market")
+    st.subheader("Today’s Market")
     if history:
-        st.caption(f"Duplicate guard is active using {len(history)} private application-history records.")
+        st.caption(f"Duplicate guard active · {len(history)} private application-history records loaded.")
     else:
         st.warning("Duplicate guard is not loaded yet. Import your application history under **My Applications** before applying from this queue.")
 
@@ -152,37 +335,42 @@ if section == "🔎 Job Market":
     view = view.sort_values(["score", "date_found"], ascending=[False, False])
 
     if view.empty:
-        st.success("Your current queue is clear. Adjust the filters or refresh live jobs to see more.")
+        st.success("Your current queue is clear. Adjust the filters or refresh the market to see more.")
 
     for _, row in view.iterrows():
         match = history_matches.get(row["id"])
+        salary = salary_label(row)
         with st.container(border=True):
-            a, b = st.columns([4, 1])
+            a, b = st.columns([4.7, 1])
             with a:
-                st.markdown(f"### {int(row['score'])} — {row['title']}")
-                st.write(f"**{row['company']}** · {row['location'] or 'Location not listed'}")
+                salary_html = f'<span class="salary-pill">{salary}</span>' if salary else ""
+                st.markdown(
+                    f'<div class="job-title"><span class="score-pill">{int(row["score"])}</span>{row["title"]}{salary_html}</div>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f'<div class="job-meta"><strong>{row["company"]}</strong> · {row["location"] or "Location not listed"}</div>',
+                    unsafe_allow_html=True,
+                )
 
                 if match and match["match_type"] == "possible":
                     prior = match["prior"]
                     prior_date = prior.get("date") or prior.get("applied_date") or "date unknown"
+                    prior_title = prior.get("title") or "another role"
                     st.warning(
-                        f"⚠️ Possible previous application: **{prior.get('title', 'similar role')}** at "
-                        f"**{prior.get('company', row['company'])}** ({prior_date}). Review before applying."
+                        f"Possible previous application: **{prior_title}** at **{prior.get('company', row['company'])}** ({prior_date}). Review before applying."
                     )
 
-                salary = ""
-                if pd.notna(row.get("salary_min")):
-                    salary = f"${int(row['salary_min']):,}+"
                 source = row.get("source") or "unknown"
-                st.write(
-                    f"**Verdict:** {row['verdict']}  |  **Status:** {row['status']}  |  **Source:** {source}"
-                    f"  {('|  **Salary:** ' + salary) if salary else ''}"
+                st.markdown(
+                    f'<div class="verdict-line"><strong>{row["verdict"]}</strong> · {row["status"].title()} · {source}</div>',
+                    unsafe_allow_html=True,
                 )
 
                 button_col, explain_col = st.columns([1, 5])
                 with button_col:
                     if row.get("url"):
-                        st.link_button("View posting", row["url"])
+                        st.link_button("Open posting ↗", row["url"])
                 with explain_col:
                     render_score_explanation(row)
             with b:
@@ -208,14 +396,14 @@ elif section == "🗺️ Market Coverage":
     c2.metric("Expansion watchlist", len(watch))
     c3.metric("High-priority gaps", int((watch["priority"] == "high").sum()))
 
-    st.markdown("### ✅ Currently collected")
+    st.markdown("### Connected now")
     st.dataframe(
         live[["name", "ats", "priority", "market_note"]].sort_values(["priority", "name"]),
         width="stretch",
         hide_index=True,
     )
 
-    st.markdown("### 🎯 Expansion watchlist")
+    st.markdown("### Expansion watchlist")
     p1, p2 = st.columns(2)
     with p1:
         priority = st.multiselect("Priority", ["high", "medium", "low"], default=["high", "medium"])
@@ -234,7 +422,7 @@ elif section == "📊 My Applications":
     st.subheader("My Applications")
     st.caption("Your private history stays on your computer. It is ignored by Git and is not published to the public repository.")
 
-    st.markdown("### 📥 Import application history")
+    st.markdown("### Import application history")
     uploaded = st.file_uploader(
         "Upload the private JSON history file",
         type=["json"],
