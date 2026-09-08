@@ -12,6 +12,7 @@
   "remote_ok": true,
   "salary_target": 0,
   "salary_floor": 0,
+  "daily_application_goal": 3,
   "employment_type": "full-time",
   "avoid_terms": [],
   "seniority_preferences": [],
