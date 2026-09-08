@@ -14,6 +14,19 @@
     "systems analyst",
     "performance analyst"
   ],
+  "title_family_terms": [
+    "business analyst",
+    "business systems analyst",
+    "systems analyst",
+    "operations analyst",
+    "business intelligence analyst",
+    "bi analyst",
+    "data analyst",
+    "performance analyst",
+    "crm analyst",
+    "continuous improvement analyst",
+    "analyst"
+  ],
   "strong_skills": [
     "power bi",
     "dax",
@@ -43,6 +56,31 @@
     "data governance",
     "tableau"
   ],
+  "focus_terms": [
+    "process improvement",
+    "continuous improvement",
+    "operations",
+    "workflow",
+    "requirements",
+    "stakeholder",
+    "business process",
+    "process optimization",
+    "change management",
+    "cross-functional",
+    "business requirements",
+    "process mapping",
+    "root cause",
+    "operational efficiency"
+  ],
+  "bonus_terms": [
+    "dynamics 365",
+    "dataverse",
+    "crm",
+    "power automate",
+    "power apps",
+    "power platform",
+    "salesforce"
+  ],
   "preferred_location_terms": [
     "indianapolis",
     "carmel",
@@ -53,14 +91,15 @@
     "greenwood",
     "westfield",
     "anderson",
-    "remote",
     "indiana",
     "columbus"
   ],
+  "remote_ok": true,
   "salary_target": 85000,
   "salary_floor": 75000,
   "employment_type": "full-time",
   "avoid_terms": ["contract only", "commission only", "door-to-door"],
   "seniority_preferences": ["analyst", "senior analyst", "specialist", "consultant"],
-  "deprioritize_seniority": ["director", "vice president", "vp", "principal engineer", "staff engineer", "chief", "head of"]
+  "deprioritize_seniority": ["director", "vice president", "vp", "principal engineer", "staff engineer", "chief", "head of"],
+  "domain_strengths": ["Supply Chain / Procurement"]
 }
