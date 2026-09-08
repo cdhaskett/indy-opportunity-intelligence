@@ -4,4 +4,6 @@ __pycache__/
 .pytest_cache/
 .streamlit/
 data/jobs.db
+data/application_history.json
+data/application_history.csv
 .DS_Store
