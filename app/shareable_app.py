@@ -9,8 +9,21 @@ sys.path.insert(0, str(ROOT))
 
 import streamlit as st
 
+from auth_user import auth_configured, database_configured, require_login
 from profile_config import has_user_profile
 
+
+secure_mode = auth_configured() and database_configured()
+if secure_mode:
+    identity = require_login()
+    from persistent_store import touch_current_user
+
+    touch_current_user()
+    st.session_state["oi_identity"] = {
+        "user_id": identity["user_id"],
+        "email": identity.get("email", ""),
+        "name": identity.get("name", ""),
+    }
 
 if has_user_profile():
     runpy.run_path(str(Path(__file__).with_name("shareable_dashboard.py")), run_name="__main__")
