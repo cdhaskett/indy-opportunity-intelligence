@@ -15,6 +15,12 @@
     {"name":"Rolls-Royce","ats":"workday","priority":"high","market_note":"Major Indianapolis employer; engineering, operations, analytics and business roles","config":{"host":"https://rollsroyce.wd3.myworkdayjobs.com","tenant":"rollsroyce","site":"professional","locale":"en-US","search_terms":["analyst","business","operations","data","systems","process improvement"]}},
     {"name":"Salesforce","ats":"workday","priority":"high","market_note":"Indianapolis hub; CRM, systems, operations and analytics roles","config":{"host":"https://salesforce.wd12.myworkdayjobs.com","tenant":"salesforce","site":"External_Career_Site","locale":"en-US","search_terms":["analyst","business systems","operations","data","crm","workday"]}},
     {"name":"Guidehouse","ats":"workday","priority":"high","market_note":"Indianapolis + U.S. remote consulting/data roles","config":{"host":"https://guidehouse.wd1.myworkdayjobs.com","tenant":"guidehouse","site":"External","locale":"en-US","search_terms":["analyst","business","data","operations","power bi","systems"]}},
-    {"name":"Elevance Health","ats":"workday","priority":"high","market_note":"Large Indianapolis healthcare employer with analytics and operations roles","config":{"host":"https://elevancehealth.wd1.myworkdayjobs.com","tenant":"elevancehealth","site":"ANT","locale":"en-US","search_terms":["analyst","business","data","operations","business intelligence","systems"]}}
+    {"name":"Elevance Health","ats":"workday","priority":"high","market_note":"Large Indianapolis healthcare employer with analytics and operations roles","config":{"host":"https://elevancehealth.wd1.myworkdayjobs.com","tenant":"elevancehealth","site":"ANT","locale":"en-US","search_terms":["analyst","business","data","operations","business intelligence","systems"]}},
+
+    {"name":"Resultant","ats":"smartrecruiters","board":"resultant","priority":"high","market_note":"Indianapolis consulting, data, technology and public-sector work"},
+    {"name":"Wabash Valley Power Alliance","ats":"smartrecruiters","board":"WabashValleyPowerAlliance","priority":"high","market_note":"Indianapolis energy cooperative with business and technology roles"},
+    {"name":"eSense Incorporated","ats":"smartrecruiters","board":"eSenseIncorporated","priority":"medium","market_note":"Indianapolis technology and public-sector consulting roles"},
+    {"name":"Bytecafe Consulting","ats":"smartrecruiters","board":"BytecafeConsultingInc","priority":"medium","market_note":"Indianapolis technology consulting roles"},
+    {"name":"STLogics / SkillDemand","ats":"smartrecruiters","board":"SkillDemand1","priority":"medium","market_note":"Indianapolis technology and business consulting roles"}
   ]
 }
