@@ -1,0 +1,1 @@
+Shareable app development lives on the shareable-build branch. The personal app remains on main. Entry point: app/shareable_app.py
