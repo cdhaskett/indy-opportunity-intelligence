@@ -27,6 +27,18 @@ US_REMOTE_MARKERS = [
     "remote, us", "remote usa", "remote united states", "us - remote",
     "working from home us"
 ]
+EXPLICIT_US_REMOTE_PHRASES = [
+    "eligible for remote work in the united states",
+    "eligible for remote work in the u.s.",
+    "remote anywhere in the united states",
+    "remote anywhere in the us",
+    "work remotely anywhere in the united states",
+    "fully remote within the united states",
+    "remote within the united states",
+    "remote in the united states",
+    "anywhere in the us",
+    "anywhere in the u.s.",
+]
 NON_US_MARKERS = [
     "india", "canada", "united kingdom", "uk", "australia", "singapore",
     "malaysia", "mexico", "brazil", "argentina", "china", "taiwan",
@@ -50,7 +62,12 @@ def is_indiana_location(location: str) -> bool:
 
 def market_eligible(job: dict) -> bool:
     location = (job.get("location") or "").lower().strip()
+    description = (job.get("description") or "").lower()
     if is_indiana_location(location):
+        return True
+
+    explicit_us_remote = any(phrase in description for phrase in EXPLICIT_US_REMOTE_PHRASES)
+    if explicit_us_remote:
         return True
 
     remote = bool(job.get("remote")) or "remote" in location or "working from home" in location
@@ -59,7 +76,7 @@ def market_eligible(job: dict) -> bool:
             return False
         if any(x in location for x in US_REMOTE_MARKERS):
             return True
-        return location in {"remote", "remote - usa", "remote, usa"}
+        return location in {"remote", "remote - usa", "remote, usa", "anywhere in the us", "anywhere in the u.s."}
 
     return False
 
