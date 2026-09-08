@@ -12,6 +12,12 @@ import streamlit as st
 from auth_user import auth_configured, database_configured, require_login
 from profile_config import has_user_profile
 
+st.set_page_config(
+    page_title="Opportunity Intelligence",
+    page_icon="🪟",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 secure_mode = auth_configured() and database_configured()
 if secure_mode:
@@ -24,6 +30,13 @@ if secure_mode:
         "email": identity.get("email", ""),
         "name": identity.get("name", ""),
     }
+    with st.sidebar:
+        st.markdown("### 🪟 Opportunity Intelligence")
+        st.caption(identity.get("email") or identity.get("name") or "Signed in")
+        if st.button("Sign out", use_container_width=True):
+            st.logout()
+else:
+    st.session_state.pop("oi_identity", None)
 
 if has_user_profile():
     runpy.run_path(str(Path(__file__).with_name("shareable_dashboard.py")), run_name="__main__")
