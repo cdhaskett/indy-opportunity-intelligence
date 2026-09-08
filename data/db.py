@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import sqlite3
 from pathlib import Path
-from typing import Iterable, Dict
+from typing import Dict, Iterable
+
+from auth_user import database_configured, is_logged_in
 
 DB_PATH = Path(__file__).resolve().parent / "jobs.db"
 
@@ -37,6 +40,10 @@ CREATE TABLE IF NOT EXISTS outcomes (
 """
 
 
+def _persistent_mode() -> bool:
+    return database_configured() and is_logged_in()
+
+
 def connect():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -44,11 +51,21 @@ def connect():
 
 
 def initialize():
+    if _persistent_mode():
+        from persistent_store import ensure_schema
+
+        ensure_schema()
+        return
     with connect() as conn:
         conn.executescript(SCHEMA)
 
 
 def upsert_jobs(jobs: Iterable[Dict]):
+    if _persistent_mode():
+        from persistent_store import upsert_jobs as upsert_persistent_jobs
+
+        upsert_persistent_jobs(jobs)
+        return
     initialize()
     with connect() as conn:
         for job in jobs:
@@ -84,6 +101,10 @@ def upsert_jobs(jobs: Iterable[Dict]):
 
 
 def list_jobs():
+    if _persistent_mode():
+        from persistent_store import list_jobs as list_persistent_jobs
+
+        return list_persistent_jobs()
     initialize()
     with connect() as conn:
         return [dict(r) for r in conn.execute(
@@ -92,6 +113,11 @@ def list_jobs():
 
 
 def update_status(job_id: int, status: str):
+    if _persistent_mode():
+        from persistent_store import update_status as update_persistent_status
+
+        update_persistent_status(job_id, status)
+        return
     initialize()
     with connect() as conn:
         conn.execute("UPDATE jobs SET status=? WHERE id=?", (status, job_id))
@@ -102,7 +128,10 @@ def update_status(job_id: int, status: str):
 
 
 def count_today_status(status: str) -> int:
-    """Count distinct jobs moved into a status today using SQLite local time."""
+    if _persistent_mode():
+        from persistent_store import count_today_status as count_persistent_today
+
+        return count_persistent_today(status)
     initialize()
     with connect() as conn:
         row = conn.execute(
