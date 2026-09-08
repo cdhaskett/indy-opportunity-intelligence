@@ -202,21 +202,35 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     }
 
     salary_min = job.get("salary_min")
+    salary_max = job.get("salary_max")
     salary_target = int(profile.get("salary_target", 0) or 0)
     salary_floor = int(profile.get("salary_floor", 0) or 0)
-    if salary_min is None:
+
+    salary_below_floor = bool(
+        salary_floor
+        and salary_max is not None
+        and float(salary_max) < salary_floor
+    )
+
+    if salary_below_floor:
+        salary_score = 0
+    elif salary_min is None:
         salary_score = 3
     elif salary_target and salary_min >= salary_target:
         salary_score = WEIGHTS["salary"]
     elif not salary_floor or salary_min >= salary_floor:
         salary_score = 5
     else:
-        salary_score = 0
+        salary_score = 1 if salary_max is not None and salary_max >= salary_floor else 0
+
     total += salary_score
     details["salary"] = {
         "score": salary_score,
         "max": WEIGHTS["salary"],
         "salary_min": salary_min,
+        "salary_max": salary_max,
+        "salary_floor": salary_floor,
+        "below_floor": salary_below_floor,
     }
 
     avoid = contains_any(combined, profile.get("avoid_terms", []))
@@ -236,16 +250,23 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     elif has_soft_gate:
         total = min(total, 64)
 
+    # Compensation is a user constraint, not merely another weighted preference.
+    # If the posted ceiling cannot meet the user's floor, do not recommend applying
+    # even when title/skills/location are otherwise an excellent match.
+    if salary_below_floor:
+        total = min(total, 49)
+
     details["hard_requirements"] = {
         "penalty": domain_penalty,
         "findings": hard_domains,
         "hard_gate": has_hard_gate,
         "soft_gate": has_soft_gate,
+        "salary_gate": salary_below_floor,
     }
 
     total = max(0, min(100, int(round(total))))
 
-    if has_hard_gate:
+    if has_hard_gate or salary_below_floor:
         verdict = "SKIP"
     elif total >= 80:
         verdict = "APPLY"
