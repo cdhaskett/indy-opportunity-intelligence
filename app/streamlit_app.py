@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -9,6 +10,9 @@ import streamlit as st
 import pandas as pd
 from data.db import list_jobs, update_status
 from run_collectors import run as run_collectors
+from matching.scorer import score_job
+
+PROFILE = json.loads((ROOT / "data" / "candidate_profile.json").read_text())
 
 st.set_page_config(
     page_title="Indy Opportunity Intelligence",
@@ -35,7 +39,19 @@ if not jobs:
     st.info("No jobs loaded yet. Click **Refresh live jobs** to pull the first real market snapshot.")
     st.stop()
 
-df = pd.DataFrame(jobs)
+# Re-score in memory using the latest model so changes appear immediately,
+# even before the next collector refresh updates SQLite.
+rescored_jobs = []
+score_details = {}
+for job in jobs:
+    score, detail = score_job(job, PROFILE)
+    job = dict(job)
+    job["score"] = score
+    job["verdict"] = detail["verdict"]
+    rescored_jobs.append(job)
+    score_details[job["id"]] = detail
+
+df = pd.DataFrame(rescored_jobs)
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Jobs found", len(df))
@@ -65,9 +81,11 @@ if company_filter:
 if status_filter:
     view = view[view["status"].isin(status_filter)]
 
+view = view.sort_values(["score", "date_found"], ascending=[False, False])
 statuses = ["new", "saved", "applied", "screen", "interview", "final", "offer", "rejected", "withdrawn"]
 
 for _, row in view.iterrows():
+    details = score_details[row["id"]]
     with st.container(border=True):
         a, b = st.columns([4, 1])
         with a:
@@ -81,8 +99,42 @@ for _, row in view.iterrows():
                 f"**Verdict:** {row['verdict']}  |  **Status:** {row['status']}  |  **Source:** {source}"
                 f"  {('|  **Salary:** ' + salary) if salary else ''}"
             )
-            if row.get("url"):
-                st.link_button("View posting", row["url"])
+
+            button_col, explain_col = st.columns([1, 5])
+            with button_col:
+                if row.get("url"):
+                    st.link_button("View posting", row["url"])
+            with explain_col:
+                with st.expander("Why this score?"):
+                    score_rows = [
+                        ("Title / job family", details["title"]["score"], details["title"]["max"]),
+                        ("Skills", details["skills"]["score"], details["skills"]["max"]),
+                        ("Seniority", details["seniority"]["score"], details["seniority"]["max"]),
+                        ("Process / operations", details["process_ops"]["score"], details["process_ops"]["max"]),
+                        ("CRM / Power Platform bonus", details["crm_power_platform"]["score"], details["crm_power_platform"]["max"]),
+                        ("Location / remote", details["location"]["score"], details["location"]["max"]),
+                        ("Compensation", details["salary"]["score"], details["salary"]["max"]),
+                    ]
+                    for label, earned, possible in score_rows:
+                        st.write(f"**{label}:** {earned}/{possible}")
+
+                    matched = []
+                    matched.extend(details["skills"].get("strong_matches", []))
+                    matched.extend(details["skills"].get("secondary_matches", []))
+                    matched.extend(details["process_ops"].get("matches", []))
+                    matched.extend(details["crm_power_platform"].get("matches", []))
+                    matched = list(dict.fromkeys(matched))
+
+                    if matched:
+                        st.write("**Matched signals:** " + ", ".join(matched[:14]))
+                    else:
+                        st.write("**Matched signals:** No strong keyword signals yet.")
+
+                    warnings = details["seniority"].get("warnings", [])
+                    if warnings:
+                        st.warning("Seniority warning: " + ", ".join(warnings))
+                    if details["salary"].get("salary_min") is None:
+                        st.caption("Compensation was not listed, so the role receives neutral partial credit rather than a penalty.")
         with b:
             current_status = row["status"] if row["status"] in statuses else "new"
             new_status = st.selectbox(
