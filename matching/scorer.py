@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import re
 from typing import Dict, List, Tuple
 
@@ -6,72 +7,57 @@ WEIGHTS = {
     "title": 24,
     "skills": 24,
     "seniority": 14,
-    "process_ops": 16,
-    "crm_power_platform": 6,
+    "focus": 16,
+    "bonus": 6,
     "location": 10,
     "salary": 6,
 }
 
-PROCESS_TERMS = [
+DEFAULT_FOCUS_TERMS = [
     "process improvement", "continuous improvement", "operations",
     "workflow", "requirements", "stakeholder", "business process",
     "process optimization", "change management", "cross-functional",
     "business requirements", "process mapping", "root cause",
-    "operational efficiency", "continuous improvement"
+    "operational efficiency",
 ]
 
-CRM_TERMS = [
+DEFAULT_BONUS_TERMS = [
     "dynamics 365", "dataverse", "crm", "power automate",
-    "power apps", "power platform", "salesforce"
+    "power apps", "power platform", "salesforce",
 ]
 
-ANALYST_TERMS = [
-    "business analyst", "business systems analyst", "systems analyst",
-    "operations analyst", "business intelligence analyst", "bi analyst",
-    "data analyst", "performance analyst", "crm analyst",
-    "continuous improvement analyst"
-]
-
-# Domains where years of direct functional experience can be a true hiring gate.
-# These only matter when the posting pairs the domain with explicit requirement language.
 DOMAIN_TERMS = {
     "HR / People Operations": [
         "hr operations", "human resources", "hr generalist", "people operations",
         "employee relations", "shared services", "workday hcm", "payroll operations",
-        "benefits administration", "talent operations"
+        "benefits administration", "talent operations",
     ],
     "Healthcare / Clinical": [
         "clinical experience", "healthcare experience", "hospital experience",
-        "health system", "payer experience", "provider experience", "clinical operations"
+        "health system", "payer experience", "provider experience", "clinical operations",
     ],
     "Finance / Accounting": [
         "accounting experience", "finance experience", "financial accounting",
-        "gaap", "fp&a", "financial planning and analysis", "public accounting"
+        "gaap", "fp&a", "financial planning and analysis", "public accounting",
     ],
     "Insurance": [
         "insurance experience", "claims experience", "underwriting experience",
-        "actuarial experience", "property and casualty", "p&c insurance"
+        "actuarial experience", "property and casualty", "p&c insurance",
     ],
     "Legal / Compliance": [
         "legal experience", "law firm experience", "regulatory compliance experience",
-        "paralegal experience", "legal operations"
+        "paralegal experience", "legal operations",
     ],
     "Supply Chain / Procurement": [
         "supply chain experience", "procurement experience", "purchasing experience",
-        "logistics experience", "warehouse operations experience"
+        "logistics experience", "warehouse operations experience",
     ],
-}
-
-# Domains supported strongly enough by the candidate's background that an explicit
-# domain requirement should not automatically be considered a gap.
-PROFILE_DOMAIN_STRENGTHS = {
-    "Supply Chain / Procurement",
 }
 
 REQUIREMENT_CUES = [
     "required", "requirement", "must have", "minimum", "at least",
     "years of", "years experience", "years of experience", "proven experience",
-    "direct experience", "prior experience", "demonstrated experience"
+    "direct experience", "prior experience", "demonstrated experience",
 ]
 
 
@@ -80,16 +66,21 @@ def normalize(text: str | None) -> str:
 
 
 def contains_any(text: str, terms: List[str]) -> List[str]:
-    return [term for term in terms if term in text]
+    return [term for term in terms if term and normalize(term) in text]
 
 
-def detect_hard_domain_requirements(description: str) -> List[Dict]:
-    """Find explicit domain-experience gates without penalizing casual mentions."""
+def detect_hard_domain_requirements(description: str, profile: Dict) -> List[Dict]:
+    """Find explicit domain-experience gates the current user does not claim as a strength."""
     findings: List[Dict] = []
-    chunks = [c.strip() for c in re.split(r"[\n\r•]|(?<=[.!?])\s+", description) if c.strip()]
+    domain_strengths = set(profile.get("domain_strengths", []))
+    chunks = [
+        c.strip()
+        for c in re.split(r"[\n\r•]|(?<=[.!?])\s+", description)
+        if c.strip()
+    ]
 
     for domain, terms in DOMAIN_TERMS.items():
-        if domain in PROFILE_DOMAIN_STRENGTHS:
+        if domain in domain_strengths:
             continue
         for chunk in chunks:
             domain_hits = contains_any(chunk, terms)
@@ -102,17 +93,11 @@ def detect_hard_domain_requirements(description: str) -> List[Dict]:
 
             years = int(years_match.group(1)) if years_match else None
             if years is not None and years >= 4:
-                penalty = 24
-                severity = "high"
-                gate = "hard"
+                penalty, severity, gate = 24, "high", "hard"
             elif years is not None and years >= 2:
-                penalty = 16
-                severity = "medium"
-                gate = "soft"
+                penalty, severity, gate = 16, "medium", "soft"
             else:
-                penalty = 10
-                severity = "medium"
-                gate = "soft"
+                penalty, severity, gate = 10, "medium", "soft"
 
             findings.append({
                 "domain": domain,
@@ -134,24 +119,28 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     location = normalize(job.get("location"))
     combined = f"{title} {description} {location}"
 
-    details = {}
+    details: Dict = {}
     total = 0
 
-    title_matches = contains_any(title, profile["target_titles"])
-    analyst_matches = contains_any(title, ANALYST_TERMS)
+    target_titles = profile.get("target_titles", [])
+    title_family_terms = profile.get("title_family_terms", target_titles)
+    title_matches = contains_any(title, target_titles)
+    family_matches = contains_any(title, title_family_terms)
     if title_matches:
         title_score = WEIGHTS["title"]
-    elif analyst_matches or "analyst" in title:
+    elif family_matches:
         title_score = 19
-    elif any(t in title for t in ["systems", "business intelligence", "operations"]):
-        title_score = 13
     else:
         title_score = 0
     total += title_score
-    details["title"] = {"score": title_score, "max": WEIGHTS["title"], "matches": title_matches or analyst_matches}
+    details["title"] = {
+        "score": title_score,
+        "max": WEIGHTS["title"],
+        "matches": title_matches or family_matches,
+    }
 
-    strong = contains_any(combined, profile["strong_skills"])
-    secondary = contains_any(combined, profile["secondary_skills"])
+    strong = contains_any(combined, profile.get("strong_skills", []))
+    secondary = contains_any(combined, profile.get("secondary_skills", []))
     raw = min(1.0, (len(strong) + len(secondary) * 0.5) / 5.0)
     skill_score = round(WEIGHTS["skills"] * raw)
     total += skill_score
@@ -162,66 +151,84 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         "secondary_matches": secondary,
     }
 
-    bad_seniority = contains_any(title, profile["deprioritize_seniority"])
+    bad_seniority = contains_any(title, profile.get("deprioritize_seniority", []))
+    seniority_preferences = profile.get("seniority_preferences", [])
     if bad_seniority:
         seniority_score = 2
-    elif "senior" in title and "analyst" in title:
+    elif contains_any(title, seniority_preferences):
         seniority_score = WEIGHTS["seniority"]
-    elif any(x in title for x in profile["seniority_preferences"]):
-        seniority_score = WEIGHTS["seniority"]
-    elif "analyst" in title:
+    elif family_matches:
         seniority_score = 12
     else:
         seniority_score = 8
     total += seniority_score
-    details["seniority"] = {"score": seniority_score, "max": WEIGHTS["seniority"], "warnings": bad_seniority}
+    details["seniority"] = {
+        "score": seniority_score,
+        "max": WEIGHTS["seniority"],
+        "warnings": bad_seniority,
+    }
 
-    process_matches = contains_any(combined, PROCESS_TERMS)
-    process_score = min(WEIGHTS["process_ops"], len(set(process_matches)) * 4)
-    total += process_score
-    details["process_ops"] = {"score": process_score, "max": WEIGHTS["process_ops"], "matches": process_matches}
+    focus_terms = profile.get("focus_terms", DEFAULT_FOCUS_TERMS)
+    focus_matches = contains_any(combined, focus_terms)
+    focus_score = min(WEIGHTS["focus"], len(set(focus_matches)) * 4)
+    total += focus_score
+    details["process_ops"] = {
+        "score": focus_score,
+        "max": WEIGHTS["focus"],
+        "matches": focus_matches,
+    }
 
-    crm_matches = contains_any(combined, CRM_TERMS)
-    crm_score = min(WEIGHTS["crm_power_platform"], len(set(crm_matches)) * 3)
-    total += crm_score
-    details["crm_power_platform"] = {"score": crm_score, "max": WEIGHTS["crm_power_platform"], "matches": crm_matches}
+    bonus_terms = profile.get("bonus_terms", DEFAULT_BONUS_TERMS)
+    bonus_matches = contains_any(combined, bonus_terms)
+    bonus_score = min(WEIGHTS["bonus"], len(set(bonus_matches)) * 3)
+    total += bonus_score
+    details["crm_power_platform"] = {
+        "score": bonus_score,
+        "max": WEIGHTS["bonus"],
+        "matches": bonus_matches,
+    }
 
-    preferred_locations = contains_any(location, profile["preferred_location_terms"])
+    preferred_locations = contains_any(location, profile.get("preferred_location_terms", []))
     remote = bool(job.get("remote")) or "remote" in combined
-    location_score = WEIGHTS["location"] if (preferred_locations or remote) else 3
+    remote_ok = bool(profile.get("remote_ok", True))
+    location_score = WEIGHTS["location"] if (preferred_locations or (remote and remote_ok)) else 3
     total += location_score
     details["location"] = {
         "score": location_score,
         "max": WEIGHTS["location"],
         "matches": preferred_locations,
         "remote": remote,
+        "remote_ok": remote_ok,
     }
 
     salary_min = job.get("salary_min")
+    salary_target = int(profile.get("salary_target", 0) or 0)
+    salary_floor = int(profile.get("salary_floor", 0) or 0)
     if salary_min is None:
         salary_score = 3
-    elif salary_min >= profile["salary_target"]:
+    elif salary_target and salary_min >= salary_target:
         salary_score = WEIGHTS["salary"]
-    elif salary_min >= profile["salary_floor"]:
+    elif not salary_floor or salary_min >= salary_floor:
         salary_score = 5
     else:
         salary_score = 0
     total += salary_score
-    details["salary"] = {"score": salary_score, "max": WEIGHTS["salary"], "salary_min": salary_min}
+    details["salary"] = {
+        "score": salary_score,
+        "max": WEIGHTS["salary"],
+        "salary_min": salary_min,
+    }
 
-    avoid = contains_any(combined, profile["avoid_terms"])
+    avoid = contains_any(combined, profile.get("avoid_terms", []))
     if avoid:
         total -= 20
         details["avoid"] = avoid
 
-    hard_domains = detect_hard_domain_requirements(description)
+    hard_domains = detect_hard_domain_requirements(description, profile)
     domain_penalty = min(30, sum(item["penalty"] for item in hard_domains))
     if domain_penalty:
         total -= domain_penalty
 
-    # A genuine multi-year domain requirement that the candidate does not meet
-    # is a qualification gate, not merely another weighted preference. Adjacent
-    # skills cannot lift the role back into APPLY / STRONG CONSIDER territory.
     has_hard_gate = any(item.get("gate") == "hard" for item in hard_domains)
     has_soft_gate = any(item.get("gate") == "soft" for item in hard_domains)
     if has_hard_gate:
