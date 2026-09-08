@@ -10,9 +10,10 @@ sys.path.insert(0, str(ROOT))
 import pandas as pd
 import streamlit as st
 
-from data.db import list_jobs, update_status
+from data.db import count_today_status, list_jobs, update_status
 from matching.application_history import load_history, match_history, save_history
 from matching.scorer import score_job
+from market_state import load_market_state, save_refresh_result
 from profile_config import (
     has_user_profile,
     load_profile,
@@ -112,6 +113,7 @@ def build_profile(
     domain_strengths: list[str],
     salary_floor: int,
     salary_target: int,
+    daily_application_goal: int,
     avoid_terms: str,
 ) -> dict:
     locations: list[str] = []
@@ -144,6 +146,7 @@ def build_profile(
             "domain_strengths": list(domain_strengths),
             "salary_floor": int(salary_floor),
             "salary_target": int(salary_target),
+            "daily_application_goal": int(daily_application_goal),
             "avoid_terms": split_terms(avoid_terms),
         }
     )
@@ -276,6 +279,15 @@ def profile_form(current: dict, template: dict, form_key: str, onboarding: bool 
             placeholder="commission only, contract only, night shift",
         )
 
+        daily_application_goal = st.number_input(
+            "Daily application goal",
+            min_value=1,
+            max_value=10,
+            step=1,
+            value=3 if onboarding else int(current.get("daily_application_goal", 3) or 3),
+            help="A small daily target keeps the search moving without turning it into endless scrolling.",
+        )
+
         button_text = "🚀 Save & Find My Jobs" if onboarding else "💾 Save Profile"
         submitted = st.form_submit_button(button_text, use_container_width=True)
 
@@ -313,6 +325,7 @@ def profile_form(current: dict, template: dict, form_key: str, onboarding: bool 
         domain_strengths=domain_strengths,
         salary_floor=salary_floor,
         salary_target=salary_target,
+        daily_application_goal=daily_application_goal,
         avoid_terms=avoid_terms,
     )
 
@@ -365,6 +378,10 @@ skills, target roles and dealbreakers to build a shortlist worth your time.</p>
 
 profile = load_profile()
 profile_name = profile.get("name") or "Job Seeker"
+market_state = load_market_state()
+new_refresh_ids = {int(job_id) for job_id in market_state.get("new_job_ids", [])}
+applied_today = count_today_status("applied")
+daily_goal = max(1, int(profile.get("daily_application_goal", 3) or 3))
 
 st.markdown(
     f'<div class="menu">File &nbsp; View &nbsp; Favorites &nbsp; Tools &nbsp; Help'
@@ -401,6 +418,8 @@ for raw in list_jobs():
     rows.append(job)
 
 df = pd.DataFrame(rows) if rows else pd.DataFrame()
+if not df.empty:
+    df["is_new_refresh"] = df["id"].isin(new_refresh_ids)
 statuses = [
     "new", "saved", "applied", "screen", "interview",
     "final", "offer", "rejected", "withdrawn",
@@ -462,8 +481,11 @@ if section == "🏠 Job Market":
     left, right = st.columns([1, 4])
     with left:
         if st.button("🔄 Refresh Market", use_container_width=True):
+            before_ids = {int(job["id"]) for job in list_jobs()}
             with st.spinner("Checking job sources for your market..."):
                 run_collectors()
+            after_ids = {int(job["id"]) for job in list_jobs()}
+            save_refresh_result(after_ids - before_ids)
             st.rerun()
     with right:
         market = ", ".join(profile.get("preferred_location_terms", [])[:4]) or "not configured"
@@ -479,14 +501,24 @@ if section == "🏠 Job Market":
         ]
 
         st.markdown('<div class="section">📊 Market Pulse</div>', unsafe_allow_html=True)
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Market Watch", len(df))
-        m2.metric("Apply Now", int((active["verdict"] == "APPLY").sum()))
-        m3.metric("Strong Matches", int((active["verdict"] == "STRONG CONSIDER").sum()))
-        m4.metric("Previous Applications", int((df["history_match"] == "exact").sum()))
+        m2.metric("New This Refresh", int(df["is_new_refresh"].sum()))
+        m3.metric("Apply Now", int((active["verdict"] == "APPLY").sum()))
+        m4.metric("Strong Matches", int((active["verdict"] == "STRONG CONSIDER").sum()))
+        m5.metric("Previous Applications", int((df["history_match"] == "exact").sum()))
+
+        st.markdown('<div class="section">🎯 Today’s Goal</div>', unsafe_allow_html=True)
+        progress = min(1.0, applied_today / daily_goal)
+        st.progress(progress)
+        if applied_today >= daily_goal:
+            st.success(f"{applied_today}/{daily_goal} applications today — goal complete.")
+        else:
+            remaining = daily_goal - applied_today
+            st.caption(f"{applied_today}/{daily_goal} applications today · {remaining} to go")
 
         st.markdown('<div class="section">📂 Today’s Shortlist</div>', unsafe_allow_html=True)
-        f1, f2, f3 = st.columns(3)
+        f1, f2, f3, f4 = st.columns(4)
         with f1:
             verdicts = st.multiselect(
                 "Verdict",
@@ -499,12 +531,16 @@ if section == "🏠 Job Market":
                 sorted(df["company"].dropna().unique()),
             )
         with f3:
+            only_new = st.checkbox("Only new this refresh", value=False)
+        with f4:
             show_handled = st.checkbox("Show already handled", value=False)
 
         view = df[df["verdict"].isin(verdicts)].copy()
         if not show_handled:
             view = view[view["status"].isin(["new", "saved"])]
         view = view[view["history_match"] != "exact"]
+        if only_new:
+            view = view[view["is_new_refresh"]]
         if companies:
             view = view[view["company"].isin(companies)]
         view = view.sort_values(
@@ -642,6 +678,7 @@ else:
         f'Market: {market}<br>'
         f'Remote: {"Yes" if profile.get("remote_ok", True) else "No"}<br>'
         f'Target roles: {roles}<br>'
+        f'Daily goal: {daily_goal} applications<br>'
         f'Profile storage: {profile_source()}</div>',
         unsafe_allow_html=True,
     )
