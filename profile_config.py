@@ -11,14 +11,33 @@ USER_PROFILE_PATH = DATA_DIR / "user_profile.json"
 TEMPLATE_PROFILE_PATH = DATA_DIR / "profile_template.json"
 
 
-def load_profile() -> dict[str, Any]:
-    """Load the private local profile when present, otherwise use the repository default."""
-    path = USER_PROFILE_PATH if USER_PROFILE_PATH.exists() else DEFAULT_PROFILE_PATH
+def _read_json(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        payload = {}
+        return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def has_user_profile() -> bool:
+    """Return True only when this installation has completed its own setup."""
+    return USER_PROFILE_PATH.exists()
+
+
+def load_profile_template() -> dict[str, Any]:
+    """Load the neutral, shareable profile template."""
+    if TEMPLATE_PROFILE_PATH.exists():
+        return _read_json(TEMPLATE_PROFILE_PATH)
+    return _read_json(DEFAULT_PROFILE_PATH)
+
+
+def load_profile() -> dict[str, Any]:
+    """Load this user's private profile, or a neutral template before first-run setup."""
+    if has_user_profile():
+        profile = _read_json(USER_PROFILE_PATH)
+        if profile:
+            return profile
+    return load_profile_template()
 
 
 def save_user_profile(profile: dict[str, Any]) -> None:
@@ -27,14 +46,13 @@ def save_user_profile(profile: dict[str, Any]) -> None:
     USER_PROFILE_PATH.write_text(json.dumps(profile, indent=2), encoding="utf-8")
 
 
-def load_profile_template() -> dict[str, Any]:
-    path = TEMPLATE_PROFILE_PATH if TEMPLATE_PROFILE_PATH.exists() else DEFAULT_PROFILE_PATH
+def reset_user_profile() -> None:
+    """Remove only the private local profile so onboarding can be run again."""
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        payload = {}
-    return payload if isinstance(payload, dict) else {}
+        USER_PROFILE_PATH.unlink()
+    except FileNotFoundError:
+        pass
 
 
 def profile_source() -> str:
-    return "private" if USER_PROFILE_PATH.exists() else "default"
+    return "private" if has_user_profile() else "template"
