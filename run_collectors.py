@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from collectors.ashby import fetch_ashby_jobs
@@ -16,7 +17,7 @@ REGISTRY = json.loads((ROOT / "data" / "employers.json").read_text())
 
 LOCAL_MARKERS = [
     "indianapolis", "carmel", "fishers", "noblesville", "westfield",
-    "greenwood", "plainfield", "avon", "anderson", "indiana", ", in",
+    "greenwood", "plainfield", "avon", "anderson", "indiana",
 ]
 US_REMOTE_MARKERS = [
     "united states", "usa", "u.s.", "us remote", "remote - us",
@@ -34,9 +35,14 @@ COLLECTORS = {
     "ashby": fetch_ashby_jobs,
 }
 
-def market_eligible(job: dict) -> bool:
-    location = (job.get("location") or "").lower()
+def is_indiana_location(location: str) -> bool:
     if any(x in location for x in LOCAL_MARKERS):
+        return True
+    return bool(re.search(r",\s*in(?:\s+\d{5})?(?:$|;)", location))
+
+def market_eligible(job: dict) -> bool:
+    location = (job.get("location") or "").lower().strip()
+    if is_indiana_location(location):
         return True
 
     remote = bool(job.get("remote")) or "remote" in location
@@ -45,7 +51,7 @@ def market_eligible(job: dict) -> bool:
             return False
         if any(x in location for x in US_REMOTE_MARKERS):
             return True
-        return location.strip() in {"remote", "remote - usa", "remote, usa"}
+        return location in {"remote", "remote - usa", "remote, usa"}
 
     return False
 
