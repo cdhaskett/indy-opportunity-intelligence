@@ -18,6 +18,12 @@
     {"name":"Arcwood Environmental","segment":"Environmental Services","coverage":"not_collected","priority":"medium","why":"Business analyst and operational technology opportunities."},
     {"name":"Telamon","segment":"Technology / Telecom","coverage":"not_collected","priority":"medium","why":"Carmel-based ERP and business-systems opportunities."},
     {"name":"Cook Medical","segment":"Medical Devices","coverage":"not_collected","priority":"medium","why":"Indiana ERP, process and systems analyst roles."},
-    {"name":"State of Indiana / Indiana Courts","segment":"Government","coverage":"not_collected","priority":"high","why":"Business analyst, policy, systems, data and public-service opportunities."}
+    {"name":"State of Indiana / Indiana Courts","segment":"Government","coverage":"not_collected","priority":"high","why":"Business analyst, policy, systems, data and public-service opportunities."},
+    {"name":"Damien Center","segment":"LGBTQ+ / HIV Services","coverage":"not_collected","priority":"high","why":"Indianapolis mission-driven employer with operations, program, data, technology and administrative functions."},
+    {"name":"Indy Pride","segment":"LGBTQ+ Community","coverage":"not_collected","priority":"high","why":"Indianapolis LGBTQ+ organization with operations, programs, events, partnerships and community-impact work."},
+    {"name":"The Trevor Project","segment":"LGBTQ+ Youth / Nonprofit","coverage":"not_collected","priority":"high","why":"National LGBTQ+ youth organization with remote opportunities across operations, advocacy, technology, analytics and organizational support."},
+    {"name":"Out & Equal Workplace Advocates","segment":"LGBTQ+ Workplace Inclusion","coverage":"not_collected","priority":"high","why":"Fully remote LGBTQ+ workplace-inclusion organization; strong mission fit for operations, systems, analytics and partner-support roles."},
+    {"name":"Human Rights Campaign","segment":"LGBTQ+ Advocacy","coverage":"not_collected","priority":"medium","why":"Large national LGBTQ+ advocacy organization with operations, data, technology, research and program roles."},
+    {"name":"Lambda Legal","segment":"LGBTQ+ Legal Advocacy","coverage":"not_collected","priority":"medium","why":"National LGBTQ+ civil-rights organization with technology, operations, data, communications and organizational-support roles, including some work-from-home positions."}
   ]
 }
