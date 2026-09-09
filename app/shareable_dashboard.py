@@ -37,6 +37,45 @@ helper_css = """
 [data-testid="stAlert"] * {
     color: inherit !important;
 }
+/* Hosted beta: keep account chrome compact and inside the app. */
+[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"] {
+    display: none !important;
+}
+.account-strip {
+    background: #f5f3eb;
+    border: 1px solid #aca899;
+    box-shadow: inset 1px 1px #fff;
+    color: #111;
+    padding: .34rem .55rem;
+    font-size: .78rem;
+    min-height: 2rem;
+    box-sizing: border-box;
+}
+.account-strip .product { color: #0b3d91; font-weight: 700; }
+.account-strip .identity { float: right; color: #4e5f6f; font-weight: 700; }
+"""
+
+old_menu = """st.markdown(
+    f'<div class=\"menu\">File &nbsp; View &nbsp; Favorites &nbsp; Tools &nbsp; Help'
+    f'<span style=\"float:right;color:#16418a\"><b>{profile_name}</b></span></div>',
+    unsafe_allow_html=True,
+)
+"""
+
+new_menu = """identity = st.session_state.get(\"oi_identity\") or {}
+signed_in_label = identity.get(\"email\") or identity.get(\"name\") or profile_name
+account_left, account_right = st.columns([9, 1], vertical_alignment=\"center\")
+with account_left:
+    st.markdown(
+        f'<div class=\"account-strip\"><span class=\"product\">🪟 Opportunity Intelligence</span>'
+        f' &nbsp; File &nbsp; View &nbsp; Favorites &nbsp; Tools &nbsp; Help'
+        f'<span class=\"identity\">{signed_in_label}</span></div>',
+        unsafe_allow_html=True,
+    )
+with account_right:
+    if st.button(\"Sign out\", key=\"top-sign-out\", use_container_width=True):
+        st.logout()
 """
 
 replacements = [
@@ -53,6 +92,10 @@ replacements = [
         'elif section == "📝 Resume Helper":\n    render_resume_helper(profile, rows)\n\nelif section == "📂 My Applications":',
     ),
     (
+        old_menu,
+        new_menu,
+    ),
+    (
         "</style>",
         helper_css + "\n</style>",
     ),
@@ -60,7 +103,7 @@ replacements = [
 
 for old, new in replacements:
     if old not in source:
-        raise RuntimeError(f"Resume Helper navigation patch anchor missing: {old}")
+        raise RuntimeError(f"Resume Helper/account navigation patch anchor missing: {old}")
     source = source.replace(old, new, 1)
 
 exec(
