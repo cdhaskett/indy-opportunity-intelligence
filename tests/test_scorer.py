@@ -53,6 +53,29 @@ def test_strong_fit_below_salary_floor_is_skip():
     assert score <= 49
 
 
+def test_description_salary_range_below_floor_is_skip():
+    job = {
+        "title": "Business Analyst",
+        "description": (
+            "Power BI Power Query Salesforce CRM analytics process improvement stakeholder work. "
+            "The anticipated salary range for this position is $55,000 - $65,000 annually."
+        ),
+        "location": "Remote, US",
+        "remote": True,
+        "salary_min": None,
+        "salary_max": None,
+    }
+
+    score, details = score_job(job, PROFILE)
+
+    assert details["salary"]["salary_min"] == 55000
+    assert details["salary"]["salary_max"] == 65000
+    assert details["salary"]["inferred_from_description"] is True
+    assert details["salary"]["below_floor"] is True
+    assert details["verdict"] == "SKIP"
+    assert score <= 49
+
+
 def test_salary_range_that_reaches_floor_is_not_hard_gated():
     job = {
         "title": "Business Systems Analyst",
