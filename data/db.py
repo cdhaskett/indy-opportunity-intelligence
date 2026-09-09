@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Iterable
 
 from auth_user import database_configured, is_logged_in
+from data.discovery_enrichment import enrich_discovery_jobs
 from matching.application_history import history_status, load_history, match_history
 
 DATA_DIR = Path(__file__).resolve().parent
@@ -56,7 +57,6 @@ def connect():
 def initialize():
     if _persistent_mode():
         from persistent_store import ensure_schema
-
         ensure_schema()
         return
     with connect() as conn:
@@ -66,7 +66,6 @@ def initialize():
 def upsert_jobs(jobs: Iterable[Dict]):
     if _persistent_mode():
         from persistent_store import upsert_jobs as upsert_persistent_jobs
-
         upsert_persistent_jobs(jobs)
         return
     initialize()
@@ -106,8 +105,8 @@ def upsert_jobs(jobs: Iterable[Dict]):
 def list_jobs():
     if _persistent_mode():
         from persistent_store import list_jobs as list_persistent_jobs
+        return enrich_discovery_jobs(list_persistent_jobs())
 
-        return list_persistent_jobs()
     initialize()
     history = load_history(HISTORY_PATH)
     with connect() as conn:
@@ -131,13 +130,12 @@ def list_jobs():
             )
             job["status"] = target
 
-        return rows
+        return enrich_discovery_jobs(rows)
 
 
 def update_status(job_id: int, status: str):
     if _persistent_mode():
         from persistent_store import update_status as update_persistent_status
-
         update_persistent_status(job_id, status)
         return
     initialize()
@@ -152,7 +150,6 @@ def update_status(job_id: int, status: str):
 def count_today_status(status: str) -> int:
     if _persistent_mode():
         from persistent_store import count_today_status as count_persistent_today
-
         return count_persistent_today(status)
     initialize()
     with connect() as conn:
