@@ -92,6 +92,30 @@ def test_salary_range_that_reaches_floor_is_not_hard_gated():
     assert details["hard_requirements"]["salary_gate"] is False
 
 
+def test_acceptable_compensation_does_not_change_fit_score():
+    base = {
+        "title": "Revenue Enablement Specialist",
+        "description": (
+            "Own Salesforce reporting, pipeline data, workflow improvement, stakeholder requirements, "
+            "Power BI dashboards, SQL analysis, process improvement and user adoption."
+        ),
+        "location": "Indianapolis, IN",
+        "remote": False,
+    }
+    lower_range = {**base, "salary_min": 75000, "salary_max": 90000}
+    higher_range = {**base, "salary_min": 105000, "salary_max": 125000}
+    unknown_range = {**base, "salary_min": None, "salary_max": None}
+
+    lower_score, lower_details = score_job(lower_range, PROFILE)
+    higher_score, higher_details = score_job(higher_range, PROFILE)
+    unknown_score, unknown_details = score_job(unknown_range, PROFILE)
+
+    assert lower_score == higher_score == unknown_score
+    assert lower_details["salary"]["scored"] is False
+    assert higher_details["salary"]["scored"] is False
+    assert unknown_details["salary"]["scored"] is False
+
+
 def test_explicit_pharma_media_experience_is_hard_gate():
     job = {
         "title": "Senior Analyst, Beyond Insights",
