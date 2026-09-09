@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT))
 
 import streamlit as st
 
+from app.loading_ui import show_xp_loader
 from auth_user import auth_configured, database_configured, require_login
 from profile_config import has_user_profile
 
@@ -47,7 +48,7 @@ header[data-testid="stHeader"] {
 }
 [data-testid="stMainBlockContainer"],
 .block-container {
-    margin-top: 0 !important;
+    margin: 0 auto !important;
     padding-top: .35rem !important;
 }
 </style>
@@ -56,8 +57,10 @@ header[data-testid="stHeader"] {
 )
 
 secure_mode = auth_configured() and database_configured()
+startup_loader = None
 if secure_mode:
     identity = require_login()
+    startup_loader = show_xp_loader("Opening your private job-search workspace")
     from persistent_store import touch_current_user
 
     touch_current_user()
@@ -67,9 +70,14 @@ if secure_mode:
         "name": identity.get("name", ""),
     }
 else:
+    startup_loader = show_xp_loader("Opening Opportunity Intelligence")
     st.session_state.pop("oi_identity", None)
 
-if has_user_profile():
+profile_ready = has_user_profile()
+if startup_loader is not None:
+    startup_loader.empty()
+
+if profile_ready:
     runpy.run_path(str(Path(__file__).with_name("shareable_dashboard.py")), run_name="__main__")
     st.stop()
 
