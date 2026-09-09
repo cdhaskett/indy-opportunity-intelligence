@@ -49,6 +49,14 @@ def ensure_schema() -> None:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS oi_resumes (
+            user_id TEXT PRIMARY KEY REFERENCES oi_users(user_id) ON DELETE CASCADE,
+            resume_text TEXT NOT NULL,
+            source_name TEXT,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS oi_jobs (
             id BIGSERIAL PRIMARY KEY,
             user_id TEXT NOT NULL REFERENCES oi_users(user_id) ON DELETE CASCADE,
@@ -201,6 +209,51 @@ def save_history(rows: list[dict[str, Any]]) -> None:
             """,
             (user_id, Jsonb(rows)),
         )
+        conn.commit()
+
+
+def load_resume() -> dict[str, Any]:
+    user_id = touch_current_user()
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT resume_text, source_name, updated_at FROM oi_resumes WHERE user_id=%s",
+            (user_id,),
+        ).fetchone()
+    if not row:
+        return {}
+    updated = row.get("updated_at")
+    return {
+        "text": row.get("resume_text") or "",
+        "source_name": row.get("source_name") or "",
+        "updated_at": updated.isoformat() if hasattr(updated, "isoformat") else updated,
+    }
+
+
+def save_resume(text: str, source_name: str = "") -> dict[str, Any]:
+    user_id = touch_current_user()
+    cleaned = (text or "").strip()
+    if not cleaned:
+        raise ValueError("Resume text is empty.")
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO oi_resumes(user_id, resume_text, source_name)
+            VALUES (%s, %s, %s)
+            ON CONFLICT(user_id) DO UPDATE SET
+                resume_text=EXCLUDED.resume_text,
+                source_name=EXCLUDED.source_name,
+                updated_at=NOW()
+            """,
+            (user_id, cleaned, (source_name or "").strip()),
+        )
+        conn.commit()
+    return load_resume()
+
+
+def delete_resume() -> None:
+    user_id = touch_current_user()
+    with _connect() as conn:
+        conn.execute("DELETE FROM oi_resumes WHERE user_id=%s", (user_id,))
         conn.commit()
 
 
