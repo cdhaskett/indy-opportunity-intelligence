@@ -47,6 +47,7 @@ SKILL_TERMS = [
     "payroll", "benefits", "healthcare", "clinical", "insurance", "compliance",
     "legal operations", "operations", "workflow", "root cause analysis", "training",
     "team leadership", "people management", "vendor management", "contract management",
+    "crm", "data governance", "automation", "security roles", "system administration",
 ]
 
 TOOL_TERMS = {
@@ -64,11 +65,12 @@ FOCUS_TERMS = {
     "supply chain", "logistics", "manufacturing", "quality assurance", "quality control",
     "sales operations", "customer success", "marketing", "recruiting", "human resources",
     "healthcare", "insurance", "compliance", "vendor management", "contract management",
+    "data governance", "automation", "system administration",
 }
 
 DOMAIN_RULES = {
     "HR / People Operations": ["human resources", "hr operations", "hr generalist", "recruiting", "payroll", "benefits", "people operations"],
-    "Healthcare / Clinical": ["healthcare", "clinical", "hospital", "health system", "patient", "payer", "provider"],
+    "Healthcare / Clinical": ["healthcare", "clinical", "hospital", "health system", "patient", "payer", "provider", "pharmaceutical", "pharma"],
     "Finance / Accounting": ["accounting", "financial analysis", "finance", "fp&a", "gaap", "audit", "controller"],
     "Insurance": ["insurance", "claims", "underwriting", "actuarial", "property and casualty"],
     "Legal / Compliance": ["legal operations", "legal", "paralegal", "regulatory compliance", "compliance"],
@@ -155,6 +157,7 @@ def _looks_like_title(line: str) -> bool:
 
 def _guess_titles(lines: list[str]) -> list[str]:
     results: list[str] = []
+    seen: set[str] = set()
     for line in lines:
         if not _looks_like_title(line):
             continue
@@ -163,7 +166,8 @@ def _guess_titles(lines: list[str]) -> list[str]:
         if not cleaned or len(cleaned) > 90:
             continue
         key = cleaned.lower()
-        if key not in {x.lower() for x in results}:
+        if key not in seen:
+            seen.add(key)
             results.append(cleaned)
         if len(results) >= 8:
             break
@@ -197,8 +201,7 @@ def _guess_seniority(titles: list[str]) -> list[str]:
     preferences = []
     for term in ["senior", "lead", "manager", "supervisor", "director", "analyst", "specialist", "coordinator", "associate"]:
         if term in joined:
-            label = "senior" if term == "senior" else term
-            preferences.append(label)
+            preferences.append(term)
     return preferences[:5]
 
 
@@ -253,6 +256,7 @@ def parse_resume_text(text: str) -> dict[str, Any]:
             "education": _education_lines(lines),
             "characters_read": len(text),
         },
+        "text": text,
     }
 
 
