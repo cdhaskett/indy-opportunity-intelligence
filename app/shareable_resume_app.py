@@ -10,8 +10,9 @@ sys.path.insert(0, str(ROOT))
 
 import streamlit as st
 
-from matching.resume_parser import parse_resume_file
+from matching.resume_parser import extract_resume_text, parse_resume_text
 from profile_config import has_user_profile, load_profile_template, save_user_profile
+from resume_store import save_resume
 
 
 # Returning users go straight into the stable shareable application.
@@ -114,8 +115,8 @@ st.markdown(
 
 st.markdown(
     '<div class="resume-box"><b>📄 Build my profile from my résumé</b><br>'
-    'Upload a PDF or Word résumé and we’ll pre-fill what we can. The original file is processed in memory '
-    'for this setup step and is not saved by Opportunity Intelligence.</div>',
+    'Upload a PDF or Word résumé and we’ll pre-fill what we can. The original file is processed in memory. '
+    'If you finish setup with it, only the extracted text is saved privately for future Résumé Match scoring.</div>',
     unsafe_allow_html=True,
 )
 
@@ -127,20 +128,29 @@ resume = st.file_uploader(
 
 resume_draft: dict = {}
 resume_summary: dict = {}
+resume_storage_text = ""
+resume_source_name = ""
 
 if resume is not None:
     file_hash = hashlib.sha256(resume.getvalue()).hexdigest()
     cache_key = "resume_parse_" + file_hash
     if cache_key not in st.session_state:
         try:
-            st.session_state[cache_key] = parse_resume_file(resume.getvalue(), resume.name)
+            extracted_text = extract_resume_text(resume.getvalue(), resume.name)
+            st.session_state[cache_key] = {
+                "parsed": parse_resume_text(extracted_text),
+                "text": extracted_text,
+            }
         except Exception as exc:
             st.session_state[cache_key] = {"error": str(exc)}
 
-    parsed = st.session_state[cache_key]
-    if parsed.get("error"):
-        st.error(f"Could not read that résumé: {parsed['error']}")
+    cached = st.session_state[cache_key]
+    if cached.get("error"):
+        st.error(f"Could not read that résumé: {cached['error']}")
     else:
+        parsed = cached.get("parsed", {})
+        resume_storage_text = str(cached.get("text") or "")
+        resume_source_name = resume.name
         resume_draft = parsed.get("profile", {})
         resume_summary = parsed.get("summary", {})
         st.success("Résumé read successfully. Review the suggestions below before saving.")
@@ -326,6 +336,8 @@ if submitted:
             }
         )
         save_user_profile(profile)
+        if resume_storage_text:
+            save_resume(resume_storage_text, resume_source_name)
         st.session_state["welcome_complete"] = profile.get("name", "Job Seeker")
         st.rerun()
 
