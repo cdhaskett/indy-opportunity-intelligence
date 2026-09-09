@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Dict, Iterable
 
+from data.discovery_enrichment import enrich_discovery_jobs
 from matching.application_history import load_history, match_history
 
 DATA_DIR = Path(__file__).resolve().parent
@@ -100,8 +101,6 @@ def _history_status(prior: dict) -> str:
     ).lower()
     raw = re.sub(r"[^a-z0-9]+", " ", raw).strip()
 
-    # Most advanced/final states first so phrases like "final interview" are
-    # not reduced to the more generic interview state.
     if any(term in raw for term in ("offer", "offered")):
         return "offer"
     if any(term in raw for term in ("final round", "final interview", "finalist", "final")):
@@ -116,9 +115,6 @@ def _history_status(prior: dict) -> str:
         return "screen"
     if any(term in raw for term in ("applied", "submitted", "application received")):
         return "applied"
-
-    # An exact history match means we know the user applied even when the
-    # imported history row does not include a clean stage/outcome field.
     return "applied"
 
 
@@ -154,7 +150,8 @@ def list_jobs():
         rows = [dict(r) for r in conn.execute(
             "SELECT * FROM jobs ORDER BY score DESC, date_found DESC"
         ).fetchall()]
-        return _reconcile_history_statuses(conn, rows)
+        rows = _reconcile_history_statuses(conn, rows)
+        return enrich_discovery_jobs(rows)
 
 
 def update_status(job_id: int, status: str):
