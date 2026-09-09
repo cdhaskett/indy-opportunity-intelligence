@@ -3,16 +3,18 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Tuple
 
-# Titles are only a weak clue. Fit is driven primarily by evidence in the
-# posting: skills, process/operations work, systems, level, location and pay.
+# Titles and compensation are not the job. Fit is driven by evidence in the
+# posting: skills, process/operations work, systems, level and location.
+# Compensation remains visible and can enforce a clear user floor, but it does
+# not add or subtract fit points.
 WEIGHTS = {
     "title": 8,
-    "skills": 30,
+    "skills": 34,
     "seniority": 10,
-    "focus": 24,
-    "bonus": 8,
+    "focus": 28,
+    "bonus": 10,
     "location": 10,
-    "salary": 10,
+    "salary": 0,
 }
 
 DEFAULT_FOCUS_TERMS = [
@@ -202,8 +204,6 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     title_family_terms = profile.get("title_family_terms", target_titles)
     title_matches = contains_any(title, target_titles)
     family_matches = contains_any(title, title_family_terms)
-    # Familiar title language is useful context, but an unfamiliar title should
-    # cost only a few points when the actual work is a strong match.
     if title_matches:
         title_score = WEIGHTS["title"]
     elif family_matches:
@@ -291,35 +291,24 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
             salary_max = inferred_max
             inferred_salary = True
 
-    salary_target = int(profile.get("salary_target", 0) or 0)
     salary_floor = int(profile.get("salary_floor", 0) or 0)
-
     salary_below_floor = bool(
         salary_floor
         and salary_max is not None
         and float(salary_max) < salary_floor
     )
 
-    if salary_below_floor:
-        salary_score = 0
-    elif salary_min is None:
-        salary_score = 5
-    elif salary_target and salary_min >= salary_target:
-        salary_score = WEIGHTS["salary"]
-    elif not salary_floor or salary_min >= salary_floor:
-        salary_score = 8
-    else:
-        salary_score = 4 if salary_max is not None and salary_max >= salary_floor else 0
-
-    total += salary_score
+    # Compensation is display/eligibility metadata, not part of Job Fit.
+    salary_score = 0
     details["salary"] = {
-        "score": salary_score,
-        "max": WEIGHTS["salary"],
+        "score": 0,
+        "max": 0,
         "salary_min": salary_min,
         "salary_max": salary_max,
         "salary_floor": salary_floor,
         "below_floor": salary_below_floor,
         "inferred_from_description": inferred_salary,
+        "scored": False,
     }
 
     avoid = contains_any(combined, profile.get("avoid_terms", []))
@@ -339,6 +328,8 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     elif has_soft_gate:
         total = min(total, 64)
 
+    # Only an explicit posted ceiling below the user's floor affects eligibility.
+    # Unknown compensation or a range that reaches the floor does not reduce fit.
     if salary_below_floor:
         total = min(total, 49)
 
