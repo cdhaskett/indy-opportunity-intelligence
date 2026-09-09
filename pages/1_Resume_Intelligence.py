@@ -11,6 +11,7 @@ import streamlit as st
 
 from data.db import list_jobs
 from matching.resume_intelligence import (
+    SKILL_CATALOG,
     extract_resume_text,
     infer_profile_from_resume,
     resume_health,
@@ -48,7 +49,6 @@ if uploaded is not None:
             st.session_state["oi_resume_name"] = uploaded.name
             inferred = infer_profile_from_resume(text, template)
 
-            # Keep personal search constraints when they already exist; replace resume-evidence fields.
             for key in [
                 "name", "preferred_location_terms", "home_city", "home_state",
                 "remote_ok", "salary_target", "salary_floor", "employment_type",
@@ -64,9 +64,9 @@ if uploaded is not None:
         st.error(str(exc))
 
 resume_text = st.session_state.get("oi_resume_text", "")
+health = resume_health(resume_text) if resume_text else None
 
-if resume_text:
-    health = resume_health(resume_text)
+if health:
     c1, c2, c3 = st.columns(3)
     c1.metric("Resume Health", health["score"])
     c2.metric("Words", health["word_count"])
@@ -81,7 +81,7 @@ if resume_text:
                 st.write(f"• {note}")
 
 st.subheader("Editable Candidate Profile")
-st.caption("This is the version Opportunity Intelligence uses for Job Fit. Fix anything the resume parser misunderstood or failed to see.")
+st.caption("Job Fit uses this profile. Add real experience the resume failed to communicate; do not add skills you cannot defend in an interview.")
 
 
 def join_terms(values) -> str:
@@ -92,6 +92,11 @@ def split_terms(value: str) -> list[str]:
     return [x.strip().lower() for x in value.replace("\n", ",").split(",") if x.strip()]
 
 
+resume_skills = set(health["skills_found"] if health else [])
+profile_skills = set(profile.get("strong_skills", []) + profile.get("secondary_skills", []))
+missing_skill_options = [s for s in SKILL_CATALOG if s not in resume_skills]
+default_missing = [s for s in profile_skills if s in missing_skill_options]
+
 with st.form("resume_profile_editor"):
     name = st.text_input("Name", value=profile.get("name", "Job Seeker"))
     target_titles = st.text_area(
@@ -100,6 +105,14 @@ with st.form("resume_profile_editor"):
         height=90,
         help="These should describe roles you can credibly pursue, not only exact historical titles.",
     )
+
+    hidden_skills = st.multiselect(
+        "Skills you genuinely have that this resume does NOT clearly show",
+        options=missing_skill_options,
+        default=default_missing,
+        help="This is the key difference between your real Job Fit and what an employer can see from the resume.",
+    ) if resume_text else []
+
     strong_skills = st.text_area(
         "Strong skills",
         value=join_terms(profile.get("strong_skills", [])),
@@ -136,16 +149,22 @@ with st.form("resume_profile_editor"):
     submitted = st.form_submit_button("Save Candidate Profile")
 
 if submitted:
+    strong = split_terms(strong_skills)
+    for skill in hidden_skills:
+        if skill not in strong:
+            strong.append(skill)
+
     updated = dict(profile)
     updated.update({
         "name": name.strip() or "Job Seeker",
         "target_titles": split_terms(target_titles),
         "title_family_terms": split_terms(target_titles) + profile.get("title_family_terms", []),
-        "strong_skills": split_terms(strong_skills),
+        "strong_skills": strong,
         "secondary_skills": split_terms(secondary_skills),
         "focus_terms": split_terms(focus_terms),
         "salary_floor": int(salary_floor),
         "salary_target": int(salary_target),
+        "resume_hidden_skills": list(hidden_skills),
     })
     updated["title_family_terms"] = list(dict.fromkeys(updated["title_family_terms"]))
     save_user_profile(updated)
@@ -155,7 +174,7 @@ if submitted:
 if resume_text:
     st.subheader("Job Fit vs Resume Match")
     st.caption(
-        "Job Fit uses your editable candidate profile. Resume Match asks a different question: does the actual resume text prove that fit?"
+        "Job Fit uses what you say you can actually do. Resume Match asks whether the uploaded resume proves it. A large positive gap means the resume is underselling you."
     )
 
     rows = []
