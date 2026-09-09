@@ -3,14 +3,16 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Tuple
 
+# Titles are only a weak clue. Fit is driven primarily by evidence in the
+# posting: skills, process/operations work, systems, level, location and pay.
 WEIGHTS = {
-    "title": 24,
-    "skills": 24,
-    "seniority": 14,
-    "focus": 16,
-    "bonus": 6,
+    "title": 8,
+    "skills": 30,
+    "seniority": 10,
+    "focus": 24,
+    "bonus": 8,
     "location": 10,
-    "salary": 6,
+    "salary": 10,
 }
 
 DEFAULT_FOCUS_TERMS = [
@@ -200,12 +202,14 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     title_family_terms = profile.get("title_family_terms", target_titles)
     title_matches = contains_any(title, target_titles)
     family_matches = contains_any(title, title_family_terms)
+    # Familiar title language is useful context, but an unfamiliar title should
+    # cost only a few points when the actual work is a strong match.
     if title_matches:
         title_score = WEIGHTS["title"]
     elif family_matches:
-        title_score = 19
+        title_score = 6
     else:
-        title_score = 0
+        title_score = 4
     total += title_score
     details["title"] = {
         "score": title_score,
@@ -228,13 +232,13 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     bad_seniority = contains_any(title, profile.get("deprioritize_seniority", []))
     seniority_preferences = profile.get("seniority_preferences", [])
     if bad_seniority:
-        seniority_score = 2
+        seniority_score = 1
     elif contains_any(title, seniority_preferences):
         seniority_score = WEIGHTS["seniority"]
     elif family_matches:
-        seniority_score = 12
-    else:
         seniority_score = 8
+    else:
+        seniority_score = 6
     total += seniority_score
     details["seniority"] = {
         "score": seniority_score,
@@ -299,13 +303,13 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     if salary_below_floor:
         salary_score = 0
     elif salary_min is None:
-        salary_score = 3
+        salary_score = 5
     elif salary_target and salary_min >= salary_target:
         salary_score = WEIGHTS["salary"]
     elif not salary_floor or salary_min >= salary_floor:
-        salary_score = 5
+        salary_score = 8
     else:
-        salary_score = 1 if salary_max is not None and salary_max >= salary_floor else 0
+        salary_score = 4 if salary_max is not None and salary_max >= salary_floor else 0
 
     total += salary_score
     details["salary"] = {
