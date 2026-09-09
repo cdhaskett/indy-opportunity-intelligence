@@ -69,6 +69,48 @@ def contains_any(text: str, terms: List[str]) -> List[str]:
     return [term for term in terms if term and normalize(term) in text]
 
 
+def _money_value(token: str) -> int | None:
+    raw = token.lower().replace("$", "").replace(",", "").strip()
+    multiplier = 1
+    if raw.endswith("k"):
+        multiplier = 1000
+        raw = raw[:-1].strip()
+    try:
+        value = float(raw) * multiplier
+    except ValueError:
+        return None
+    # Avoid accidentally treating hourly rates as annual salaries.
+    if value < 10000:
+        return None
+    return int(round(value))
+
+
+def extract_salary_range(description: str | None) -> Tuple[int | None, int | None]:
+    """Extract a clearly stated annual salary range when the ATS omits structured pay fields."""
+    text = normalize(description)
+    if not text:
+        return None, None
+
+    money = r"(?:\$\s*)?(?:\d{2,3}(?:,\d{3})+|\d{2,3}(?:\.\d+)?\s*[kK])"
+    range_pattern = re.compile(
+        rf"(?P<low>{money})\s*(?:-|–|—|to)\s*(?P<high>{money})",
+        re.IGNORECASE,
+    )
+
+    for match in range_pattern.finditer(text):
+        low = _money_value(match.group("low"))
+        high = _money_value(match.group("high"))
+        if low is None or high is None:
+            continue
+        if low > high:
+            low, high = high, low
+        # Keep this conservative: realistic annual base-pay bands only.
+        if 20000 <= low <= 500000 and 20000 <= high <= 750000:
+            return low, high
+
+    return None, None
+
+
 def detect_hard_domain_requirements(description: str, profile: Dict) -> List[Dict]:
     """Find explicit domain-experience gates the current user does not claim as a strength."""
     findings: List[Dict] = []
@@ -203,6 +245,16 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
 
     salary_min = job.get("salary_min")
     salary_max = job.get("salary_max")
+    inferred_salary = False
+    if salary_min is None or salary_max is None:
+        inferred_min, inferred_max = extract_salary_range(job.get("description"))
+        if salary_min is None and inferred_min is not None:
+            salary_min = inferred_min
+            inferred_salary = True
+        if salary_max is None and inferred_max is not None:
+            salary_max = inferred_max
+            inferred_salary = True
+
     salary_target = int(profile.get("salary_target", 0) or 0)
     salary_floor = int(profile.get("salary_floor", 0) or 0)
 
@@ -231,6 +283,7 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         "salary_max": salary_max,
         "salary_floor": salary_floor,
         "below_floor": salary_below_floor,
+        "inferred_from_description": inferred_salary,
     }
 
     avoid = contains_any(combined, profile.get("avoid_terms", []))
