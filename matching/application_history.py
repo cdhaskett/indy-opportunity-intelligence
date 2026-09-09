@@ -73,6 +73,38 @@ def save_history(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def history_status(prior: dict[str, Any] | None) -> str:
+    """Translate common imported history stages into this app's status vocabulary."""
+    prior = prior or {}
+    raw = " ".join(
+        str(prior.get(key) or "")
+        for key in (
+            "status", "stage", "outcome", "application_status",
+            "current_status", "current_stage",
+        )
+    ).lower()
+    raw = re.sub(r"[^a-z0-9]+", " ", raw).strip()
+
+    if any(term in raw for term in ("offer", "offered")):
+        return "offer"
+    if any(term in raw for term in ("final round", "final interview", "finalist", "final")):
+        return "final"
+    if any(term in raw for term in ("rejected", "declined", "not selected", "not moving forward", "no longer considered")):
+        return "rejected"
+    if any(term in raw for term in ("withdrawn", "withdrew")):
+        return "withdrawn"
+    if any(term in raw for term in ("interview", "onsite", "on site", "panel")):
+        return "interview"
+    if any(term in raw for term in ("screen", "screening", "recruiter call", "phone call")):
+        return "screen"
+    if any(term in raw for term in ("applied", "submitted", "application received")):
+        return "applied"
+
+    # An exact history match proves the user already applied even if the source
+    # history did not include a clean status field.
+    return "applied"
+
+
 def match_history(job: dict[str, Any], history: list[dict[str, Any]]) -> dict[str, Any] | None:
     """
     Returns the best prior-application match.
@@ -82,8 +114,8 @@ def match_history(job: dict[str, Any], history: list[dict[str, Any]]) -> dict[st
       - possible: warn the user, but do not suppress automatically
 
     Company-only history rows are intentionally never treated as exact. They
-    produce a warning only, which protects against LinkedIn confirmations that
-    identify the employer but omit the role title.
+    produce a warning only, which protects against confirmations that identify
+    the employer but omit the role title.
     """
     job_company = _company_key(job.get("company"))
     job_title = _title_key(job.get("title"))
