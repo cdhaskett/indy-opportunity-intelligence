@@ -35,6 +35,10 @@ DOMAIN_TERMS = {
     "Healthcare / Clinical": [
         "clinical experience", "healthcare experience", "hospital experience",
         "health system", "payer experience", "provider experience", "clinical operations",
+        "pharmaceutical experience", "pharma experience", "life sciences experience",
+        "pharmaceutical media and marketing experience", "pharmaceutical media experience",
+        "pharmaceutical marketing experience", "pharma media experience",
+        "pharma marketing experience", "hcp omnichannel", "consumer omnichannel campaigns",
     ],
     "Finance / Accounting": [
         "accounting experience", "finance experience", "financial accounting",
@@ -60,6 +64,10 @@ REQUIREMENT_CUES = [
     "direct experience", "prior experience", "demonstrated experience",
 ]
 
+PREFERENCE_CUES = [
+    "preferred", "nice to have", "nice-to-have", "bonus", "a plus", "plus if",
+]
+
 
 def normalize(text: str | None) -> str:
     return re.sub(r"\s+", " ", (text or "").lower()).strip()
@@ -79,7 +87,6 @@ def _money_value(token: str) -> int | None:
         value = float(raw) * multiplier
     except ValueError:
         return None
-    # Avoid accidentally treating hourly rates as annual salaries.
     if value < 10000:
         return None
     return int(round(value))
@@ -104,22 +111,35 @@ def extract_salary_range(description: str | None) -> Tuple[int | None, int | Non
             continue
         if low > high:
             low, high = high, low
-        # Keep this conservative: realistic annual base-pay bands only.
         if 20000 <= low <= 500000 and 20000 <= high <= 750000:
             return low, high
 
     return None, None
 
 
-def detect_hard_domain_requirements(description: str, profile: Dict) -> List[Dict]:
+def _requirement_chunks(description: str | None) -> List[str]:
+    """Split job-description HTML/text into qualification-sized chunks."""
+    text = description or ""
+    text = re.sub(
+        r"</?(?:li|p|br|div|ul|ol|h[1-6])[^>]*>",
+        "\n",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"<[^>]+>", " ", text)
+    chunks = [
+        normalize(c)
+        for c in re.split(r"[\n\r•]|(?<=[.!?])\s+", text)
+        if normalize(c)
+    ]
+    return chunks
+
+
+def detect_hard_domain_requirements(description: str | None, profile: Dict) -> List[Dict]:
     """Find explicit domain-experience gates the current user does not claim as a strength."""
     findings: List[Dict] = []
     domain_strengths = set(profile.get("domain_strengths", []))
-    chunks = [
-        c.strip()
-        for c in re.split(r"[\n\r•]|(?<=[.!?])\s+", description)
-        if c.strip()
-    ]
+    chunks = _requirement_chunks(description)
 
     for domain, terms in DOMAIN_TERMS.items():
         if domain in domain_strengths:
@@ -128,13 +148,24 @@ def detect_hard_domain_requirements(description: str, profile: Dict) -> List[Dic
             domain_hits = contains_any(chunk, terms)
             if not domain_hits:
                 continue
+
             cue_hits = contains_any(chunk, REQUIREMENT_CUES)
+            preference_hits = contains_any(chunk, PREFERENCE_CUES)
             years_match = re.search(r"\b(\d+)\s*\+?\s*(?:years?|yrs?)\b", chunk)
-            if not cue_hits and not years_match:
+            explicit_domain_experience = any(
+                "experience" in normalize(hit) for hit in domain_hits
+            )
+
+            if not cue_hits and not years_match and not explicit_domain_experience:
                 continue
 
             years = int(years_match.group(1)) if years_match else None
-            if years is not None and years >= 4:
+
+            if preference_hits:
+                penalty, severity, gate = 8, "low", "soft"
+            elif years is not None and years >= 4:
+                penalty, severity, gate = 24, "high", "hard"
+            elif explicit_domain_experience:
                 penalty, severity, gate = 24, "high", "hard"
             elif years is not None and years >= 2:
                 penalty, severity, gate = 16, "medium", "soft"
@@ -157,7 +188,8 @@ def detect_hard_domain_requirements(description: str, profile: Dict) -> List[Dic
 
 def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     title = normalize(job.get("title"))
-    description = normalize(job.get("description"))
+    raw_description = job.get("description") or ""
+    description = normalize(raw_description)
     location = normalize(job.get("location"))
     combined = f"{title} {description} {location}"
 
@@ -247,7 +279,7 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     salary_max = job.get("salary_max")
     inferred_salary = False
     if salary_min is None or salary_max is None:
-        inferred_min, inferred_max = extract_salary_range(job.get("description"))
+        inferred_min, inferred_max = extract_salary_range(raw_description)
         if salary_min is None and inferred_min is not None:
             salary_min = inferred_min
             inferred_salary = True
@@ -291,7 +323,7 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         total -= 20
         details["avoid"] = avoid
 
-    hard_domains = detect_hard_domain_requirements(description, profile)
+    hard_domains = detect_hard_domain_requirements(raw_description, profile)
     domain_penalty = min(30, sum(item["penalty"] for item in hard_domains))
     if domain_penalty:
         total -= domain_penalty
@@ -303,9 +335,6 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     elif has_soft_gate:
         total = min(total, 64)
 
-    # Compensation is a user constraint, not merely another weighted preference.
-    # If the posted ceiling cannot meet the user's floor, do not recommend applying
-    # even when title/skills/location are otherwise an excellent match.
     if salary_below_floor:
         total = min(total, 49)
 
