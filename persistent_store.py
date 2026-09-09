@@ -257,9 +257,12 @@ def upsert_jobs(jobs: Iterable[dict[str, Any]]) -> None:
 
 
 def list_jobs() -> list[dict[str, Any]]:
+    from matching.application_history import history_status, match_history
+
     user_id = touch_current_user()
+    history = load_history()
     with _connect() as conn:
-        rows = conn.execute(
+        rows = [dict(row) for row in conn.execute(
             """
             SELECT id, external_id, source, company, title, location, remote,
                    salary_min, salary_max, url, posted_at, description, status,
@@ -269,8 +272,30 @@ def list_jobs() -> list[dict[str, Any]]:
             ORDER BY date_found DESC, id DESC
             """,
             (user_id,),
-        ).fetchall()
-    return [dict(row) for row in rows]
+        ).fetchall()]
+
+        for job in rows:
+            if job.get("status") not in {"new", "saved"}:
+                continue
+            match = match_history(job, history)
+            if not match or match.get("match_type") != "exact":
+                continue
+            target = history_status(match.get("prior") or {})
+            if target == job.get("status"):
+                continue
+            result = conn.execute(
+                "UPDATE oi_jobs SET status=%s, updated_at=NOW() WHERE id=%s AND user_id=%s",
+                (target, int(job["id"]), user_id),
+            )
+            if result.rowcount:
+                conn.execute(
+                    "INSERT INTO oi_outcomes(user_id, job_id, status) VALUES (%s,%s,%s)",
+                    (user_id, int(job["id"]), target),
+                )
+                job["status"] = target
+        conn.commit()
+
+    return rows
 
 
 def update_status(job_id: int, status: str) -> None:
