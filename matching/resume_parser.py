@@ -47,7 +47,6 @@ SKILL_TERMS = [
     "payroll", "benefits", "healthcare", "clinical", "insurance", "compliance",
     "legal operations", "operations", "workflow", "root cause analysis", "training",
     "team leadership", "people management", "vendor management", "contract management",
-    "crm", "data governance", "automation", "security roles", "system administration",
 ]
 
 TOOL_TERMS = {
@@ -65,12 +64,11 @@ FOCUS_TERMS = {
     "supply chain", "logistics", "manufacturing", "quality assurance", "quality control",
     "sales operations", "customer success", "marketing", "recruiting", "human resources",
     "healthcare", "insurance", "compliance", "vendor management", "contract management",
-    "data governance", "automation", "system administration",
 }
 
 DOMAIN_RULES = {
     "HR / People Operations": ["human resources", "hr operations", "hr generalist", "recruiting", "payroll", "benefits", "people operations"],
-    "Healthcare / Clinical": ["healthcare", "clinical", "hospital", "health system", "patient", "payer", "provider", "pharmaceutical", "pharma"],
+    "Healthcare / Clinical": ["healthcare", "clinical", "hospital", "health system", "patient", "payer", "provider"],
     "Finance / Accounting": ["accounting", "financial analysis", "finance", "fp&a", "gaap", "audit", "controller"],
     "Insurance": ["insurance", "claims", "underwriting", "actuarial", "property and casualty"],
     "Legal / Compliance": ["legal operations", "legal", "paralegal", "regulatory compliance", "compliance"],
@@ -95,12 +93,24 @@ def _clean_lines(text: str) -> list[str]:
 def extract_resume_text(data: bytes, filename: str) -> str:
     suffix = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
     if suffix == "pdf":
-        from pypdf import PdfReader
+        try:
+            from pypdf import PdfReader
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "PDF résumé support is not installed yet. In the project terminal, run: "
+                "python -m pip install -r requirements.txt"
+            ) from exc
 
         reader = PdfReader(io.BytesIO(data))
         return "\n".join((page.extract_text() or "") for page in reader.pages)
     if suffix == "docx":
-        from docx import Document
+        try:
+            from docx import Document
+        except ModuleNotFoundError as exc:
+            raise RuntimeError(
+                "Word résumé support is not installed yet. In the project terminal, run: "
+                "python -m pip install -r requirements.txt"
+            ) from exc
 
         document = Document(io.BytesIO(data))
         chunks = [p.text for p in document.paragraphs if p.text.strip()]
@@ -157,7 +167,6 @@ def _looks_like_title(line: str) -> bool:
 
 def _guess_titles(lines: list[str]) -> list[str]:
     results: list[str] = []
-    seen: set[str] = set()
     for line in lines:
         if not _looks_like_title(line):
             continue
@@ -166,8 +175,7 @@ def _guess_titles(lines: list[str]) -> list[str]:
         if not cleaned or len(cleaned) > 90:
             continue
         key = cleaned.lower()
-        if key not in seen:
-            seen.add(key)
+        if key not in {x.lower() for x in results}:
             results.append(cleaned)
         if len(results) >= 8:
             break
@@ -201,7 +209,8 @@ def _guess_seniority(titles: list[str]) -> list[str]:
     preferences = []
     for term in ["senior", "lead", "manager", "supervisor", "director", "analyst", "specialist", "coordinator", "associate"]:
         if term in joined:
-            preferences.append(term)
+            label = "senior" if term == "senior" else term
+            preferences.append(label)
     return preferences[:5]
 
 
@@ -256,7 +265,6 @@ def parse_resume_text(text: str) -> dict[str, Any]:
             "education": _education_lines(lines),
             "characters_read": len(text),
         },
-        "text": text,
     }
 
 
