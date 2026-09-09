@@ -70,7 +70,6 @@ def contains_any(text: str, terms: List[str]) -> List[str]:
 
 
 def detect_hard_domain_requirements(description: str, profile: Dict) -> List[Dict]:
-    """Find explicit domain-experience gates the current user does not claim as a strength."""
     findings: List[Dict] = []
     domain_strengths = set(profile.get("domain_strengths", []))
     chunks = [
@@ -133,23 +132,14 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     else:
         title_score = 0
     total += title_score
-    details["title"] = {
-        "score": title_score,
-        "max": WEIGHTS["title"],
-        "matches": title_matches or family_matches,
-    }
+    details["title"] = {"score": title_score, "max": WEIGHTS["title"], "matches": title_matches or family_matches}
 
     strong = contains_any(combined, profile.get("strong_skills", []))
     secondary = contains_any(combined, profile.get("secondary_skills", []))
     raw = min(1.0, (len(strong) + len(secondary) * 0.5) / 5.0)
     skill_score = round(WEIGHTS["skills"] * raw)
     total += skill_score
-    details["skills"] = {
-        "score": skill_score,
-        "max": WEIGHTS["skills"],
-        "strong_matches": strong,
-        "secondary_matches": secondary,
-    }
+    details["skills"] = {"score": skill_score, "max": WEIGHTS["skills"], "strong_matches": strong, "secondary_matches": secondary}
 
     bad_seniority = contains_any(title, profile.get("deprioritize_seniority", []))
     seniority_preferences = profile.get("seniority_preferences", [])
@@ -162,61 +152,51 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
     else:
         seniority_score = 8
     total += seniority_score
-    details["seniority"] = {
-        "score": seniority_score,
-        "max": WEIGHTS["seniority"],
-        "warnings": bad_seniority,
-    }
+    details["seniority"] = {"score": seniority_score, "max": WEIGHTS["seniority"], "warnings": bad_seniority}
 
     focus_terms = profile.get("focus_terms", DEFAULT_FOCUS_TERMS)
     focus_matches = contains_any(combined, focus_terms)
     focus_score = min(WEIGHTS["focus"], len(set(focus_matches)) * 4)
     total += focus_score
-    details["process_ops"] = {
-        "score": focus_score,
-        "max": WEIGHTS["focus"],
-        "matches": focus_matches,
-    }
+    details["process_ops"] = {"score": focus_score, "max": WEIGHTS["focus"], "matches": focus_matches}
 
     bonus_terms = profile.get("bonus_terms", DEFAULT_BONUS_TERMS)
     bonus_matches = contains_any(combined, bonus_terms)
     bonus_score = min(WEIGHTS["bonus"], len(set(bonus_matches)) * 3)
     total += bonus_score
-    details["crm_power_platform"] = {
-        "score": bonus_score,
-        "max": WEIGHTS["bonus"],
-        "matches": bonus_matches,
-    }
+    details["crm_power_platform"] = {"score": bonus_score, "max": WEIGHTS["bonus"], "matches": bonus_matches}
 
     preferred_locations = contains_any(location, profile.get("preferred_location_terms", []))
     remote = bool(job.get("remote")) or "remote" in combined
     remote_ok = bool(profile.get("remote_ok", True))
     location_score = WEIGHTS["location"] if (preferred_locations or (remote and remote_ok)) else 3
     total += location_score
-    details["location"] = {
-        "score": location_score,
-        "max": WEIGHTS["location"],
-        "matches": preferred_locations,
-        "remote": remote,
-        "remote_ok": remote_ok,
-    }
+    details["location"] = {"score": location_score, "max": WEIGHTS["location"], "matches": preferred_locations, "remote": remote, "remote_ok": remote_ok}
 
     salary_min = job.get("salary_min")
+    salary_max = job.get("salary_max")
     salary_target = int(profile.get("salary_target", 0) or 0)
     salary_floor = int(profile.get("salary_floor", 0) or 0)
-    if salary_min is None:
+    salary_below_floor = bool(salary_floor and salary_max is not None and float(salary_max) < salary_floor)
+
+    if salary_below_floor:
+        salary_score = 0
+    elif salary_min is None:
         salary_score = 3
     elif salary_target and salary_min >= salary_target:
         salary_score = WEIGHTS["salary"]
     elif not salary_floor or salary_min >= salary_floor:
         salary_score = 5
     else:
-        salary_score = 0
+        salary_score = 1 if salary_max is not None and salary_max >= salary_floor else 0
     total += salary_score
     details["salary"] = {
         "score": salary_score,
         "max": WEIGHTS["salary"],
         "salary_min": salary_min,
+        "salary_max": salary_max,
+        "salary_floor": salary_floor,
+        "below_floor": salary_below_floor,
     }
 
     avoid = contains_any(combined, profile.get("avoid_terms", []))
@@ -235,17 +215,20 @@ def score_job(job: Dict, profile: Dict) -> Tuple[int, Dict]:
         total = min(total, 49)
     elif has_soft_gate:
         total = min(total, 64)
+    if salary_below_floor:
+        total = min(total, 49)
 
     details["hard_requirements"] = {
         "penalty": domain_penalty,
         "findings": hard_domains,
         "hard_gate": has_hard_gate,
         "soft_gate": has_soft_gate,
+        "salary_gate": salary_below_floor,
     }
 
     total = max(0, min(100, int(round(total))))
 
-    if has_hard_gate:
+    if has_hard_gate or salary_below_floor:
         verdict = "SKIP"
     elif total >= 80:
         verdict = "APPLY"
