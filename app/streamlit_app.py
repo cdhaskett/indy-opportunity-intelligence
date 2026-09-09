@@ -51,7 +51,6 @@ html, body, .stApp,
     overflow-x: hidden !important;
 }
 
-/* Bliss-inspired desktop wallpaper */
 .stApp {
     color: var(--xp-text);
     background: linear-gradient(
@@ -78,7 +77,6 @@ html, body, .stApp,
       radial-gradient(ellipse at 92% 108%, #45a83b 0 38%, transparent 38.4%);
 }
 
-/* One permanent Explorer window behind the complete scroll surface */
 .stApp:after {
     content: "";
     position: fixed;
@@ -109,7 +107,6 @@ html, body, .stApp,
     overflow-x: clip !important;
 }
 
-/* XP menu / navigation */
 .xp-menubar {
     background: #f5f3eb;
     color: #111;
@@ -163,7 +160,6 @@ div[role="radiogroup"] p {
     text-shadow: 1px 1px #16448a;
 }
 
-/* Market pulse */
 div[data-testid="stMetric"] {
     background: var(--xp-card) !important;
     border: 1px solid #888;
@@ -191,7 +187,6 @@ div[data-testid="stMetricLabel"] p {
     font-weight: 400 !important;
 }
 
-/* Job card shell */
 div[data-testid="stVerticalBlockBorderWrapper"] {
     background: var(--xp-card) !important;
     border: 1px solid var(--xp-border) !important;
@@ -301,7 +296,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     font-size: .76rem;
 }
 
-/* XP buttons */
 .stButton > button,
 .stLinkButton > a {
     background: linear-gradient(#fff, #e5e5df) !important;
@@ -320,7 +314,6 @@ div[data-testid="stVerticalBlockBorderWrapper"] label {
     background: linear-gradient(#fffef0, #f2e7ad) !important;
 }
 
-/* XP select / multiselect */
 div[data-testid="stSelectbox"] [data-baseweb="select"],
 div[data-testid="stSelectbox"] [data-baseweb="select"] *,
 div[data-testid="stMultiSelect"] [data-baseweb="select"],
@@ -360,7 +353,6 @@ div[data-baseweb="select"] svg {
     color: var(--xp-link) !important;
 }
 
-/* Why score pane */
 div[data-testid="stExpander"] {
     border: 1px solid var(--xp-border) !important;
     background: #fff !important;
@@ -413,7 +405,6 @@ div[data-testid="stDataFrame"] {
     overflow: hidden;
 }
 
-/* Taskbar */
 .taskbar {
     position: fixed;
     bottom: 0;
@@ -527,8 +518,16 @@ def money(value):
 
 
 def salary_label(row):
-    low = money(row.get("salary_min"))
-    high = money(row.get("salary_max"))
+    low_value = row.get("salary_min")
+    high_value = row.get("salary_max")
+    details = score_details.get(row["id"], {}).get("salary", {})
+    if low_value is None or pd.isna(low_value):
+        low_value = details.get("salary_min")
+    if high_value is None or pd.isna(high_value):
+        high_value = details.get("salary_max")
+
+    low = money(low_value)
+    high = money(high_value)
     if low and high:
         return f"{low}–{high}"
     if low:
@@ -552,6 +551,9 @@ def explain(row):
         ]:
             st.write(f"**{label}:** {details[key]['score']}/{details[key]['max']}")
 
+        if details.get("salary", {}).get("inferred_from_description"):
+            st.caption("Compensation range was read from the job description.")
+
         matched = list(dict.fromkeys(
             details["skills"].get("strong_matches", [])
             + details["skills"].get("secondary_matches", [])
@@ -568,6 +570,11 @@ def explain(row):
                 else "direct experience"
             )
             st.error(f"Hard requirement gap: {years} in {finding['domain']}.")
+
+        if details.get("hard_requirements", {}).get("salary_gate"):
+            st.error(
+                f"Compensation ceiling is below your ${PROFILE['salary_floor']/1000:.0f}K floor."
+            )
 
 
 if section == "🏠 Job Market":
@@ -712,6 +719,7 @@ elif section == "🌐 Market Coverage":
 
 else:
     st.markdown('<div class="xp-section">📂 My Applications</div>', unsafe_allow_html=True)
+    st.caption("Manage jobs you've already touched without reopening them in the active Job Market queue.")
 
     uploaded = st.file_uploader("Import application history", type=["json"])
     if uploaded:
@@ -725,11 +733,85 @@ else:
             st.error(str(exc))
 
     if history:
-        st.dataframe(pd.DataFrame(history), width="stretch", hide_index=True)
+        with st.expander(f"Imported application history · {len(history)} records"):
+            st.dataframe(pd.DataFrame(history), width="stretch", hide_index=True)
 
     if not df.empty:
-        handled = df[~df["status"].isin(["new", "saved"])]
-        st.dataframe(handled, width="stretch", hide_index=True)
+        handled = df[~df["status"].isin(["new", "saved"])].copy()
+        if handled.empty:
+            st.info("No tracked applications yet.")
+        else:
+            st.markdown('<div class="xp-section">🗂 Tracked Applications</div>', unsafe_allow_html=True)
+            h1, h2 = st.columns(2)
+            with h1:
+                handled_statuses = sorted(handled["status"].dropna().unique())
+                app_status_filter = st.multiselect(
+                    "Application status",
+                    handled_statuses,
+                    default=handled_statuses,
+                )
+            with h2:
+                app_company_filter = st.multiselect(
+                    "Company",
+                    sorted(handled["company"].dropna().unique()),
+                    key="applications-company-filter",
+                )
+
+            app_view = handled[handled["status"].isin(app_status_filter)].copy()
+            if app_company_filter:
+                app_view = app_view[app_view["company"].isin(app_company_filter)]
+            app_view = app_view.sort_values("date_found", ascending=False)
+
+            st.caption(f"{len(app_view)} tracked jobs · change Status here to reject, withdraw, or advance a role.")
+
+            for _, row in app_view.iterrows():
+                with st.container(border=True):
+                    pay = salary_label(row)
+                    pay_html = f'<span class="salary">💵 {pay}</span>' if pay else ""
+                    st.markdown(
+                        f'<div class="job-titlebar">'
+                        f'<span class="score">{int(row["score"])}</span>'
+                        f'<span class="job-title-text">{row["title"]}</span>'
+                        f'{pay_html}</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    left, right = st.columns([5.6, 1])
+                    with left:
+                        st.markdown(
+                            f'<div class="meta"><b>{row["company"]}</b> · '
+                            f'{row["location"] or "Location not listed"}</div>',
+                            unsafe_allow_html=True,
+                        )
+                        klass = (
+                            "apply" if row["verdict"] == "APPLY"
+                            else "strong" if row["verdict"] == "STRONG CONSIDER"
+                            else "stretch" if row["verdict"] == "STRETCH"
+                            else "skip"
+                        )
+                        st.markdown(
+                            f'<span class="badge {klass}">{row["verdict"]}</span>'
+                            f'<span class="badge">{row["status"]}</span>',
+                            unsafe_allow_html=True,
+                        )
+                        a, b, c = st.columns([1, 2.4, 3.2])
+                        with a:
+                            if row.get("url"):
+                                st.link_button("Open Posting", row["url"])
+                        with b:
+                            explain(row)
+
+                    with right:
+                        current = row["status"] if row["status"] in statuses else "applied"
+                        new_status = st.selectbox(
+                            "Status",
+                            statuses,
+                            index=statuses.index(current),
+                            key=f"application-status-{row['id']}",
+                        )
+                        if new_status != row["status"]:
+                            update_status(int(row["id"]), new_status)
+                            st.rerun()
 
 st.markdown(
     '<div class="taskbar">'
