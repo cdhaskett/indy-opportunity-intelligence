@@ -5,8 +5,11 @@ from pathlib import Path
 from typing import Dict, Iterable
 
 from auth_user import database_configured, is_logged_in
+from matching.application_history import history_status, load_history, match_history
 
-DB_PATH = Path(__file__).resolve().parent / "jobs.db"
+DATA_DIR = Path(__file__).resolve().parent
+DB_PATH = DATA_DIR / "jobs.db"
+HISTORY_PATH = DATA_DIR / "application_history.json"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -106,10 +109,29 @@ def list_jobs():
 
         return list_persistent_jobs()
     initialize()
+    history = load_history(HISTORY_PATH)
     with connect() as conn:
-        return [dict(r) for r in conn.execute(
+        rows = [dict(r) for r in conn.execute(
             "SELECT * FROM jobs ORDER BY score DESC, date_found DESC"
         ).fetchall()]
+
+        for job in rows:
+            if job.get("status") not in {"new", "saved"}:
+                continue
+            match = match_history(job, history)
+            if not match or match.get("match_type") != "exact":
+                continue
+            target = history_status(match.get("prior") or {})
+            if target == job.get("status"):
+                continue
+            conn.execute("UPDATE jobs SET status=? WHERE id=?", (target, int(job["id"])))
+            conn.execute(
+                "INSERT INTO outcomes(job_id, status, notes) VALUES (?, ?, ?)",
+                (int(job["id"]), target, "Reconciled from imported application history"),
+            )
+            job["status"] = target
+
+        return rows
 
 
 def update_status(job_id: int, status: str):
