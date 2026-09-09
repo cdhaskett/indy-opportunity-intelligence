@@ -117,7 +117,79 @@ def _resume_editor(stored: dict[str, Any]) -> None:
                 st.rerun()
 
 
+def _resume_helper_styles() -> None:
+    st.markdown(
+        """
+<style>
+/* Keep Resume Helper controls readable regardless of OS/browser dark preferences. */
+[data-testid="stFileUploader"] {
+    color: #111 !important;
+}
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploader"] label *,
+[data-testid="stFileUploader"] small,
+[data-testid="stFileUploader"] p {
+    color: #111 !important;
+}
+[data-testid="stFileUploaderDropzone"] {
+    background: #fffef5 !important;
+    border: 1px dashed #7f9db9 !important;
+    color: #111 !important;
+}
+[data-testid="stFileUploaderDropzone"] *,
+[data-testid="stFileUploaderDropzone"] span,
+[data-testid="stFileUploaderDropzone"] p {
+    color: #111 !important;
+}
+[data-testid="stFileUploaderDropzone"] button,
+[data-testid="stFileUploader"] button,
+.stDownloadButton > button,
+[data-testid="stDownloadButton"] button {
+    background: linear-gradient(#ffffff, #e5e5df) !important;
+    border: 1px solid #003c74 !important;
+    color: #111 !important;
+    border-radius: 3px !important;
+    font-weight: 700 !important;
+    box-shadow: inset 1px 1px #fff !important;
+}
+[data-testid="stFileUploaderDropzone"] button *,
+[data-testid="stFileUploader"] button *,
+.stDownloadButton > button *,
+[data-testid="stDownloadButton"] button * {
+    color: #111 !important;
+}
+[data-testid="stFileUploaderFile"],
+[data-testid="stFileUploaderFile"] > div {
+    background: #ffffff !important;
+    color: #111 !important;
+}
+[data-testid="stFileUploaderFile"] *,
+[data-testid="stFileUploaderFile"] span,
+[data-testid="stFileUploaderFile"] p {
+    color: #111 !important;
+}
+[data-testid="stTextArea"] textarea {
+    background: #ffffff !important;
+    color: #111 !important;
+    border: 1px solid #7f9db9 !important;
+}
+[data-testid="stTextArea"] textarea::placeholder {
+    color: #666 !important;
+    opacity: 1 !important;
+}
+[data-testid="stTextArea"] label,
+[data-testid="stTextArea"] label * {
+    color: #111 !important;
+}
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+
+
 def render_resume_helper(profile: dict[str, Any], jobs: list[dict[str, Any]]) -> None:
+    _resume_helper_styles()
+
     st.markdown("### 📝 Resume Helper")
     st.caption(
         "Two separate questions: How well do you fit the job, and how well does your résumé prove it? "
