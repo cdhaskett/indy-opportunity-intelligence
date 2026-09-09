@@ -90,3 +90,29 @@ def test_salary_range_that_reaches_floor_is_not_hard_gated():
 
     assert details["salary"]["below_floor"] is False
     assert details["hard_requirements"]["salary_gate"] is False
+
+
+def test_explicit_pharma_media_experience_is_hard_gate():
+    job = {
+        "title": "Senior Analyst, Beyond Insights",
+        "description": """
+            <ul>
+              <li>5+ years of experience in business intelligence/advanced analytics/data analytics working closely with data</li>
+              <li>Pharmaceutical media and marketing experience, with hands-on exposure to HCP and/or consumer omnichannel campaigns</li>
+              <li>Experience with SQL, Python, Snowflake, Databricks, Tableau and Power BI</li>
+            </ul>
+            <p>Pay Range: $70,000-$85,000</p>
+        """,
+        "location": "Remote - USA",
+        "remote": True,
+        "salary_min": None,
+        "salary_max": None,
+    }
+
+    score, details = score_job(job, PROFILE)
+
+    findings = details["hard_requirements"]["findings"]
+    assert any(f["domain"] == "Healthcare / Clinical" and f["gate"] == "hard" for f in findings)
+    assert details["hard_requirements"]["hard_gate"] is True
+    assert details["verdict"] == "SKIP"
+    assert score <= 49
