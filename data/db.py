@@ -1,9 +1,15 @@
 from __future__ import annotations
+
+import re
 import sqlite3
 from pathlib import Path
-from typing import Iterable, Dict
+from typing import Dict, Iterable
 
-DB_PATH = Path(__file__).resolve().parent / "jobs.db"
+from matching.application_history import load_history, match_history
+
+DATA_DIR = Path(__file__).resolve().parent
+DB_PATH = DATA_DIR / "jobs.db"
+HISTORY_PATH = DATA_DIR / "application_history.json"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -36,14 +42,17 @@ CREATE TABLE IF NOT EXISTS outcomes (
 );
 """
 
+
 def connect():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def initialize():
     with connect() as conn:
         conn.executescript(SCHEMA)
+
 
 def upsert_jobs(jobs: Iterable[Dict]):
     initialize()
@@ -79,12 +88,74 @@ def upsert_jobs(jobs: Iterable[Dict]):
                 )
             )
 
+
+def _history_status(prior: dict) -> str:
+    """Translate common imported history stages into this app's status vocabulary."""
+    raw = " ".join(
+        str(prior.get(key) or "")
+        for key in (
+            "status", "stage", "outcome", "application_status",
+            "current_status", "current_stage",
+        )
+    ).lower()
+    raw = re.sub(r"[^a-z0-9]+", " ", raw).strip()
+
+    # Most advanced/final states first so phrases like "final interview" are
+    # not reduced to the more generic interview state.
+    if any(term in raw for term in ("offer", "offered")):
+        return "offer"
+    if any(term in raw for term in ("final round", "final interview", "finalist", "final")):
+        return "final"
+    if any(term in raw for term in ("rejected", "declined", "not selected", "not moving forward", "no longer considered")):
+        return "rejected"
+    if any(term in raw for term in ("withdrawn", "withdrew")):
+        return "withdrawn"
+    if any(term in raw for term in ("interview", "onsite", "on site", "panel")):
+        return "interview"
+    if any(term in raw for term in ("screen", "screening", "recruiter call", "phone call")):
+        return "screen"
+    if any(term in raw for term in ("applied", "submitted", "application received")):
+        return "applied"
+
+    # An exact history match means we know the user applied even when the
+    # imported history row does not include a clean stage/outcome field.
+    return "applied"
+
+
+def _reconcile_history_statuses(conn, rows: list[dict]) -> list[dict]:
+    history = load_history(HISTORY_PATH)
+    if not history:
+        return rows
+
+    for job in rows:
+        if job.get("status") not in {"new", "saved"}:
+            continue
+        match = match_history(job, history)
+        if not match or match.get("match_type") != "exact":
+            continue
+
+        target = _history_status(match.get("prior") or {})
+        if target == job.get("status"):
+            continue
+
+        conn.execute("UPDATE jobs SET status=? WHERE id=?", (target, int(job["id"])))
+        conn.execute(
+            "INSERT INTO outcomes(job_id, status, notes) VALUES (?, ?, ?)",
+            (int(job["id"]), target, "Reconciled from imported application history"),
+        )
+        job["status"] = target
+
+    return rows
+
+
 def list_jobs():
     initialize()
     with connect() as conn:
-        return [dict(r) for r in conn.execute(
+        rows = [dict(r) for r in conn.execute(
             "SELECT * FROM jobs ORDER BY score DESC, date_found DESC"
         ).fetchall()]
+        return _reconcile_history_statuses(conn, rows)
+
 
 def update_status(job_id: int, status: str):
     initialize()
