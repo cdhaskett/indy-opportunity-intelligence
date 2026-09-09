@@ -78,10 +78,21 @@ with account_right:
         st.logout()
 """
 
+old_refresh_spinner = """            with st.spinner(\"Checking job sources for your market...\"):
+                run_collectors()
+"""
+
+new_refresh_loader = """            refresh_loader = show_xp_loader(\"Checking career pages and ATS feeds\")
+            try:
+                run_collectors()
+            finally:
+                refresh_loader.empty()
+"""
+
 replacements = [
     (
         "from data.db import count_today_status, list_jobs, update_status",
-        "from app.resume_helper_ui import render_resume_helper\nfrom data.db import count_today_status, list_jobs, update_status",
+        "from app.loading_ui import show_xp_loader\nfrom app.resume_helper_ui import render_resume_helper\nfrom data.db import count_today_status, list_jobs, update_status",
     ),
     (
         '["🏠 Job Market", "📂 My Applications", "🛠 Control Panel"]',
@@ -96,6 +107,10 @@ replacements = [
         new_menu,
     ),
     (
+        old_refresh_spinner,
+        new_refresh_loader,
+    ),
+    (
         "</style>",
         helper_css + "\n</style>",
     ),
@@ -103,7 +118,7 @@ replacements = [
 
 for old, new in replacements:
     if old not in source:
-        raise RuntimeError(f"Resume Helper/account navigation patch anchor missing: {old}")
+        raise RuntimeError(f"Resume Helper/account/loading patch anchor missing: {old}")
     source = source.replace(old, new, 1)
 
 exec(
