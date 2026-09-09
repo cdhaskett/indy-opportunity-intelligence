@@ -39,14 +39,42 @@ helper_css = """
 }
 """
 
+row_lane_patch = """job[\"verdict\"] = detail[\"verdict\"]
+    lane_info = classify_opportunity(job, PROFILE, score, detail)
+    job[\"opportunity_lane\"] = lane_info[\"lane\"]
+    job[\"lane_icon\"] = lane_info[\"lane_icon\"]
+    job[\"lane_strength\"] = lane_info[\"lane_strength\"]
+    job[\"hidden_fit\"] = lane_info[\"hidden_fit\"]"""
+
+salary_explain_patch = """if key == \"salary\" and details[key].get(\"scored\") is False:
+                st.write(\"**Compensation:** shown, not scored\")
+            else:
+                st.write(f\"**{label}:** {details[key]['score']}/{details[key]['max']}\")"""
+
 replacements = [
     (
         "from data.db import list_jobs, update_status",
-        "from app.resume_helper_ui import render_resume_helper\nfrom data.db import list_jobs, update_status",
+        "from app.opportunity_lanes_ui import render_lane_spotlight\nfrom app.resume_helper_ui import render_resume_helper\nfrom data.db import list_jobs, update_status\nfrom matching.opportunity_lanes import classify_opportunity, diversify_dataframe",
     ),
     (
         '["🏠 Job Market", "🌐 Market Coverage", "📂 My Applications"]',
         '["🏠 Job Market", "📝 Resume Helper", "🌐 Market Coverage", "📂 My Applications"]',
+    ),
+    (
+        'job["verdict"] = detail["verdict"]',
+        row_lane_patch,
+    ),
+    (
+        'st.write(f"**{label}:** {details[key][\'score\']}/{details[key][\'max\']}")',
+        salary_explain_patch,
+    ),
+    (
+        'c5.metric("Review Duplicates", int((df["history_match"] == "possible").sum()))',
+        'c5.metric("Review Duplicates", int((df["history_match"] == "possible").sum()))\n\n    render_lane_spotlight(active, "xp-section")',
+    ),
+    (
+        'view = view.sort_values(["score", "date_found"], ascending=[False, False])',
+        'view = diversify_dataframe(view.sort_values(["score", "date_found"], ascending=[False, False]))',
     ),
     (
         'elif section == "🌐 Market Coverage":',
@@ -60,7 +88,7 @@ replacements = [
 
 for old, new in replacements:
     if old not in source:
-        raise RuntimeError(f"Resume Helper navigation patch anchor missing: {old}")
+        raise RuntimeError(f"Opportunity Intelligence patch anchor missing: {old}")
     source = source.replace(old, new, 1)
 
 exec(
