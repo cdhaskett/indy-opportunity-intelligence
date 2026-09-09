@@ -7,6 +7,7 @@ import streamlit as st
 from matching.resume_helper import analyze_resume_for_job
 from matching.resume_parser import extract_resume_text
 from matching.scorer import score_job
+from resume_store import delete_resume, load_resume, save_resume
 
 
 def _job_label(job: dict[str, Any], score: int) -> str:
@@ -54,12 +55,77 @@ def _coaching_text(job: dict[str, Any], analysis: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _resume_editor(stored: dict[str, Any]) -> None:
+    has_stored = bool(stored.get("text"))
+    if has_stored:
+        source = stored.get("source_name") or "saved résumé"
+        st.success(f"My Résumé is saved · {source}")
+        st.caption(
+            "Only extracted résumé text is stored. The original PDF/Word file is not kept by Opportunity Intelligence."
+        )
+        label = "Update / replace My Résumé"
+    else:
+        st.info(
+            "Add your résumé once. After that, Résumé Match can be calculated automatically for every role you review."
+        )
+        label = "Add My Résumé"
+
+    with st.expander(label, expanded=not has_stored):
+        upload = st.file_uploader(
+            "Upload PDF, Word, or TXT",
+            type=["pdf", "docx", "txt"],
+            key="my-resume-upload",
+            help="The document is read in memory; only extracted text is saved.",
+        )
+        pasted = st.text_area(
+            "Or paste résumé text — rough drafts are fine",
+            height=160,
+            key="my-resume-paste",
+            placeholder="Paste an old résumé, current résumé, or rough work-history notes here...",
+        )
+
+        if st.button("💾 Save My Résumé", use_container_width=True, key="save-my-resume"):
+            text = ""
+            source_name = "Pasted résumé text"
+            if upload is not None:
+                try:
+                    text = extract_resume_text(upload.getvalue(), upload.name)
+                    source_name = upload.name
+                except Exception as exc:
+                    st.error(f"I couldn't read that résumé: {exc}")
+                    return
+            elif pasted.strip():
+                text = pasted.strip()
+
+            if not text.strip():
+                st.error("Upload a résumé or paste some résumé/work-history text first.")
+                return
+
+            try:
+                save_resume(text, source_name)
+            except Exception as exc:
+                st.error(f"Could not save My Résumé: {exc}")
+                return
+            st.session_state["resume_saved_message"] = "My Résumé saved. Résumé Match scores are ready."
+            st.rerun()
+
+    if has_stored:
+        with st.expander("Remove My Résumé"):
+            st.caption("This removes the stored extracted text. Your job profile and application history stay intact.")
+            if st.button("Remove stored résumé", key="remove-my-resume"):
+                delete_resume()
+                st.rerun()
+
+
 def render_resume_helper(profile: dict[str, Any], jobs: list[dict[str, Any]]) -> None:
     st.markdown("### 📝 Resume Helper")
     st.caption(
         "Two separate questions: How well do you fit the job, and how well does your résumé prove it? "
-        "The helper will never tell you to invent experience."
+        "A weak résumé should trigger coaching — not lower the person's Job Fit."
     )
+
+    if "resume_saved_message" in st.session_state:
+        st.success(st.session_state.pop("resume_saved_message"))
 
     if not jobs:
         st.info("Load or refresh the job market first, then come back here to tailor a résumé to a real role.")
@@ -78,48 +144,32 @@ def render_resume_helper(profile: dict[str, Any], jobs: list[dict[str, Any]]) ->
         format_func=lambda i: _job_label(scored[i][1], scored[i][0]),
     )
     fit_score, job, fit_details = scored[selected_index]
+    stored = load_resume()
+    resume_text = str(stored.get("text") or "")
+    analysis = (
+        analyze_resume_for_job(resume_text, job, profile, fit_score, fit_details)
+        if resume_text
+        else None
+    )
 
     st.markdown(f"**{job.get('title')}** · {job.get('company')} · {job.get('location') or 'Location not listed'}")
     if job.get("url"):
         st.link_button("Open job posting", job["url"])
 
-    st.markdown("#### Give me the résumé you actually have")
-    upload = st.file_uploader(
-        "Upload PDF, Word, or TXT",
-        type=["pdf", "docx", "txt"],
-        key="resume-helper-upload",
-        help="The file is read for this analysis. The helper does not need to save the original résumé.",
-    )
-    pasted = st.text_area(
-        "Or paste résumé text — rough drafts are completely fine",
-        height=170,
-        key="resume-helper-paste",
-        placeholder="Paste the current résumé, an old résumé, or even rough work-history notes here...",
-    )
-
-    resume_text = ""
-    if upload is not None:
-        try:
-            resume_text = extract_resume_text(upload.getvalue(), upload.name)
-        except Exception as exc:
-            st.error(f"I couldn't read that résumé: {exc}")
-            return
-    elif pasted.strip():
-        resume_text = pasted.strip()
-
-    if not resume_text:
-        st.info(
-            "Upload a résumé or paste whatever text you have. A weak résumé is not a problem — "
-            "the point of this page is to show where the document is underselling the person."
-        )
-        return
-
-    analysis = analyze_resume_for_job(resume_text, job, profile, fit_score, fit_details)
-
+    st.markdown("#### 📊 Two-score view")
     c1, c2 = st.columns(2)
-    c1.metric("Job Fit", analysis["job_fit_score"])
-    c2.metric("Résumé Match", analysis["resume_match_score"])
-    st.info(analysis["headline"])
+    c1.metric("Job Fit", fit_score)
+    c2.metric("Résumé Match", analysis["resume_match_score"] if analysis else "—")
+    if analysis:
+        st.info(analysis["headline"])
+    else:
+        st.caption("Résumé Match is waiting for My Résumé. Add it once below; Job Fit is already available.")
+
+    st.markdown("#### 📄 My Résumé")
+    _resume_editor(stored)
+
+    if not analysis:
+        return
 
     health = analysis["resume_health"]
     st.markdown(f"#### 🩺 Résumé health: {health['label']}")
