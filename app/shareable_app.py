@@ -30,11 +30,6 @@ if secure_mode:
         "email": identity.get("email", ""),
         "name": identity.get("name", ""),
     }
-    with st.sidebar:
-        st.markdown("### 🪟 Opportunity Intelligence")
-        st.caption(identity.get("email") or identity.get("name") or "Signed in")
-        if st.button("Sign out", use_container_width=True):
-            st.logout()
 else:
     st.session_state.pop("oi_identity", None)
 
