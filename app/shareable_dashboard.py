@@ -539,8 +539,16 @@ def money(value):
 
 
 def pay_label(row):
-    lo = money(row.get("salary_min"))
-    hi = money(row.get("salary_max"))
+    lo_value = row.get("salary_min")
+    hi_value = row.get("salary_max")
+    salary_details = details_by_id.get(row["id"], {}).get("salary", {})
+    if lo_value is None or pd.isna(lo_value):
+        lo_value = salary_details.get("salary_min")
+    if hi_value is None or pd.isna(hi_value):
+        hi_value = salary_details.get("salary_max")
+
+    lo = money(lo_value)
+    hi = money(hi_value)
     if lo and hi:
         return f"{lo}–{hi}"
     if lo:
@@ -563,6 +571,8 @@ def score_explanation(row):
             ("Compensation", "salary"),
         ]:
             st.write(f"**{label}:** {d[key]['score']}/{d[key]['max']}")
+        if d.get("salary", {}).get("inferred_from_description"):
+            st.caption("Compensation range was read from the job description.")
         matched = list(
             dict.fromkeys(
                 d["skills"].get("strong_matches", [])
@@ -580,6 +590,9 @@ def score_explanation(row):
                 else "direct experience"
             )
             st.error(f"Hard requirement gap: {years} in {finding['domain']}.")
+        if d.get("hard_requirements", {}).get("salary_gate"):
+            floor = int(profile.get("salary_floor", 0) or 0)
+            st.error(f"Compensation ceiling is below your ${floor/1000:.0f}K minimum.")
 
 
 if section == "🏠 Job Market":
@@ -715,7 +728,7 @@ if section == "🏠 Job Market":
 
 elif section == "📂 My Applications":
     st.markdown('<div class="section">📂 My Applications</div>', unsafe_allow_html=True)
-    st.caption("This history is private to this user profile.")
+    st.caption("Manage jobs you've already touched without putting them back in the active shortlist.")
 
     if "my-history-import-result" in st.session_state:
         added = st.session_state.pop("my-history-import-result")
@@ -726,33 +739,91 @@ elif section == "📂 My Applications":
         st.rerun()
 
     if history:
-        st.markdown("### Imported application history")
-        history_df = pd.DataFrame(history)
-        visible_history_cols = [
-            col
-            for col in ["company", "title", "date_applied", "status", "requisition_id", "source"]
-            if col in history_df.columns
-        ]
-        st.dataframe(
-            history_df[visible_history_cols] if visible_history_cols else history_df,
-            use_container_width=True,
-            hide_index=True,
-        )
-
-    if not df.empty:
-        handled = df[~df["status"].isin(["new", "saved"])]
-        if not handled.empty:
-            st.markdown("### Tracked in this app")
-            visible_cols = [
+        with st.expander(f"Imported application history · {len(history)} records"):
+            history_df = pd.DataFrame(history)
+            visible_history_cols = [
                 col
-                for col in ["company", "title", "score", "verdict", "status", "date_found"]
-                if col in handled.columns
+                for col in ["company", "title", "date_applied", "status", "requisition_id", "source"]
+                if col in history_df.columns
             ]
             st.dataframe(
-                handled[visible_cols],
+                history_df[visible_history_cols] if visible_history_cols else history_df,
                 use_container_width=True,
                 hide_index=True,
             )
+
+    if not df.empty:
+        handled = df[~df["status"].isin(["new", "saved"])].copy()
+        if handled.empty:
+            st.info("No tracked applications yet.")
+        else:
+            st.markdown('<div class="section">🗂 Tracked Applications</div>', unsafe_allow_html=True)
+            h1, h2 = st.columns(2)
+            with h1:
+                handled_statuses = sorted(handled["status"].dropna().unique())
+                app_status_filter = st.multiselect(
+                    "Application status",
+                    handled_statuses,
+                    default=handled_statuses,
+                )
+            with h2:
+                app_company_filter = st.multiselect(
+                    "Company",
+                    sorted(handled["company"].dropna().unique()),
+                    key="applications-company-filter",
+                )
+
+            app_view = handled[handled["status"].isin(app_status_filter)].copy()
+            if app_company_filter:
+                app_view = app_view[app_view["company"].isin(app_company_filter)]
+            app_view = app_view.sort_values("date_found", ascending=False)
+
+            st.caption(f"{len(app_view)} tracked jobs · change Status here to reject, withdraw, or advance a role.")
+
+            for _, row in app_view.iterrows():
+                with st.container(border=True):
+                    pay = pay_label(row)
+                    pay_html = f'<span class="salary">💵 {pay}</span>' if pay else ""
+                    st.markdown(
+                        f'<div class="titlebar"><span class="score">{int(row["score"])}</span>'
+                        f'<span class="titletext">{row["title"]}</span>{pay_html}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    body, status_col = st.columns([5.5, 1])
+                    with body:
+                        st.markdown(
+                            f'<div class="meta"><b>{row["company"]}</b> · '
+                            f'{row["location"] or "Location not listed"}</div>',
+                            unsafe_allow_html=True,
+                        )
+                        cls = (
+                            "apply" if row["verdict"] == "APPLY"
+                            else "strong" if row["verdict"] == "STRONG CONSIDER"
+                            else "stretch" if row["verdict"] == "STRETCH"
+                            else "skip"
+                        )
+                        st.markdown(
+                            f'<span class="badge {cls}">{row["verdict"]}</span>'
+                            f'<span class="badge">{row["status"]}</span>',
+                            unsafe_allow_html=True,
+                        )
+                        a, b = st.columns([1, 3])
+                        with a:
+                            if row.get("url"):
+                                st.link_button("Open Posting", row["url"])
+                        with b:
+                            score_explanation(row)
+                    with status_col:
+                        current = row["status"] if row["status"] in statuses else "applied"
+                        new_status = st.selectbox(
+                            "Status",
+                            statuses,
+                            index=statuses.index(current),
+                            key=f"application-status-{row['id']}",
+                        )
+                        if new_status != row["status"]:
+                            update_status(int(row["id"]), new_status)
+                            st.rerun()
 
 else:
     st.markdown(
